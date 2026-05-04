@@ -2,7 +2,7 @@
   
   <div class="scroll-container m-0 pt-5" @mousedown="startDrag" @mousemove="onDrag" @mouseup="stopDrag" @mouseleave="stopDrag" @contextmenu.prevent>
     
-    <div id="zoom-canvas" class="scroll-row">
+    <div id="zoom-canvas" class="scroll-row px-3">
 
       <!-- List Section -->  
       <template v-for="(list, index) in main.lists" :key="index">
@@ -167,8 +167,6 @@
         <span class="context-menu-icon">📦</span>
         Move Bottom
       </div>
-
-
     </div>
     
     <!-- Popup -->
@@ -194,25 +192,15 @@
                 <p class="due-date-text mb-0">{{ selectedCard.dueDate || 'No due date' }}</p>
               </div>
               <div class="col-6 col-md-4">
-                <input 
-                  type="date" 
-                  v-model="selectedCard.dueDate"
-                  class="date-picker-input form-control"
-                  :class="{ 'no-date': !selectedCard.dueDate }"
-                  :data-placeholder="selectedCard.dueDate ? '' : 'No due date'"
-                />
+                <input  type="date"  v-model="selectedCard.dueDate" class="date-picker-input form-control" :class="{ 'no-date': !selectedCard.dueDate }" :data-placeholder="selectedCard.dueDate ? '' : 'No due date'" />
               </div>
             </div>
           </div>
           
           <div v-if="getCardChecklists(selectedCard.idChecklists).length > 0" class="popup-field">
             <label>Checklists:</label>
-            <div 
-              v-for="checklist in getCardChecklists(selectedCard.idChecklists)" 
-              :key="checklist.id"
-              class="checklist"
-            >
-              <div class="checklist-title"></div>
+            <div v-for="checklist in getCardChecklists(selectedCard.idChecklists)" :key="checklist.id"class="checklist">
+              <div class="checklist-title"><input class="rename-input p-2" v-model="checklist.name "/></div>
               <div class="checklist-items">
                 <div 
                   v-for="item in checklist.checkItems" 
@@ -221,16 +209,22 @@
                 >
                   <input 
                     type="checkbox" 
-                    :checked="item.state === 'complete'"
+                    v-model="item.state"
                     :id="item.id"
                     class="checklist-checkbox"
+                    :true-value="'complete'"
+                    :false-value="'incomplete'"
                   />
                   <label :for="item.id" class="checklist-label">{{ item.name }}</label>
+                  <button class="btn btn-sm">dd</button>
+                  <button class="btn btn-sm">dd</button>
+                  <button class="btn btn-sm">dd</button>
                 </div>
               </div>
             </div>
           </div>
         </div>
+        
       </div>
     </div>
 
