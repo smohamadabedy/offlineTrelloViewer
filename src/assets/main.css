@@ -1488,3 +1488,57 @@ a,
   outline: none;
   box-shadow: 0 0 0 2px rgba(0, 121, 191, 0.2);
 }
+
+
+.mode-toggle {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  background: #f0f0f0;
+  color: #333;
+  transition: all 0.3s;
+}
+
+.mode-toggle:hover {
+  background: #e0e0e0;
+  transform: translateY(-1px);
+}
+
+/* Dark Mode */
+.app.dark-mode {
+  background: #1a1a2e;
+  min-height: 100vh;
+  margin: 0;
+  max-width: 100%;
+  padding: 50px 20px;
+}
+
+.dark-mode .header h1 {
+  color: #e0e0e0;
+}
+
+.dark-mode .mode-toggle {
+  background: #2d2d44;
+  color: #e0e0e0;
+}
+
+.tags-input-dark .tags-input-wrapper-default {
+    padding: .5em .25em;
+    background: #2d2d2d;
+    border: 1px solid #4e3bd1fc;
+    border-radius: .25em;
+    padding: .5rem;
+    /* border-color: #dbdbdb; */
+}
+
+.tags-input-dark .tags-input-badge-selected-default {
+    color: #dfe5eb;
+    background-color: #4069a7b0;
+}
+
+.tags-input-dark .tags-input input[type="text"] {
+    color: #c2add3;
+}

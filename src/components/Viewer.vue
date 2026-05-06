@@ -1,44 +1,49 @@
 <template>
-  
-  <div class="scroll-container m-0 pt-5" @mousedown="startDrag" @mousemove="onDrag" @mouseup="stopDrag" @mouseleave="stopDrag" @contextmenu.prevent>
-    
+
+  <div class="scroll-container m-0 pt-5 dark-mode" @mousedown="startDrag" @mousemove="onDrag" @mouseup="stopDrag"
+    @mouseleave="stopDrag" @contextmenu.prevent>
+
     <div id="zoom-canvas" class="scroll-row px-3">
 
-      <!-- List Section -->  
+      <!-- List Section -->
       <template v-for="(list, index) in main.lists" :key="index">
-        <div class="list-item" v-if="list.closed==is_archived" :data-list-index="index" :data-list-id="list.id" :class="{ 'dragging-source': draggedListIndex === index,  'drag-over-list': draggedOverListId === list.id && draggedCardSourceList !== list.id}">
+        <div class="list-item" v-if="list.closed == is_archived" :data-list-index="index" :data-list-id="list.id"
+          :class="{ 'dragging-source': draggedListIndex === index, 'drag-over-list': draggedOverListId === list.id && draggedCardSourceList !== list.id }">
           <!-- Header -->
-          <div class="header" draggable="true" @dragstart="onListDragStart($event, index)" @dragend="onListDragEnd" @dragover="onListDragOver($event, index)" @drop="onListDrop($event, index)">
-            
-            <div class="header-colorbar" v-if="list.color != null" :style="{'background-color': list.color}"></div>
-            
+          <div class="header" draggable="true" @dragstart="onListDragStart($event, index)" @dragend="onListDragEnd"
+            @dragover="onListDragOver($event, index)" @drop="onListDrop($event, index)">
+
+            <div class="header-colorbar" v-if="list.color != null" :style="{ 'background-color': list.color }"></div>
+
             <div class="drag-handle">⋮⋮</div>
-            
+
             <div class="list-title" v-if="renamingIndex !== index">
-              <span @click="startRename(index,$event)" class="cursor-text">{{list.name}}</span>
+              <span @click="startRename(index, $event)" class="cursor-text">{{ list.name }}</span>
             </div>
-            <input v-else v-model="renameValue" @click.stop @change="saveRename(index)" @keyup.esc="cancelRename" @mousedown.stop class="rename-input" ref="renameInput" autofocus/>
-            
+            <input v-else v-model="renameValue" @click.stop @change="saveRename(index)" @keyup.esc="cancelRename"
+              @mousedown.stop class="rename-input" ref="renameInput" autofocus />
+
             <div class="header-dots">
-              <button class="btn btn-sm" @click.stop="toggleSettingsPanel(index)"><span class="d-block">⋮</span></button>
+              <button class="btn btn-sm" @click.stop="toggleSettingsPanel(index)"><span
+                  class="d-block">⋮</span></button>
               <!-- Settings Panel -->
               <div v-if="activeSettingsPanel === index" class="settings-panel">
                 <div class="settings-item">
-                  <button @click="startRename(index,$event)"><small>✏️ Rename</small></button>
+                  <button @click="startRename(index, $event)"><small>✏️ Rename</small></button>
                 </div>
                 <div class="settings-item">
                   <div>
-                    <input type="color" v-model="list.color" class="btn color-custom" title="Custom color"/>
-                    <button @click="removeColor(index)"class="p-2"><small>✕</small></button>
+                    <input type="color" v-model="list.color" class="btn color-custom" title="Custom color" />
+                    <button @click="removeColor(index)" class="p-2"><small>✕</small></button>
                   </div>
                 </div>
                 <div class="settings-item settings-item-row">
-                  <button @click="addListBefore(index)"><small>|← <br/>Add</small></button>
-                  <button @click="addListAfter(index)"> <small>→| <br/>Add</small></button>
+                  <button @click="addListBefore(index)"><small>|← <br />Add</small></button>
+                  <button @click="addListAfter(index)"> <small>→| <br />Add</small></button>
                 </div>
                 <div class="settings-item settings-item-row">
-                  <button @click="moveListUp(index)"> <small>← <br/> Move</small></button>
-                  <button @click="moveListDown(index)"><small>→ <br/> Move</small></button>
+                  <button @click="moveListUp(index)"> <small>← <br /> Move</small></button>
+                  <button @click="moveListDown(index)"><small>→ <br /> Move</small></button>
                 </div>
                 <div class="settings-item">
                   <button @click="duplicateList(index)"><small>📋 Duplicate</small></button>
@@ -54,52 +59,44 @@
 
           </div>
           <!-- Content -->
-          <div 
-            class="content"
-            @dragover="onCardContentDragOver($event, list.id)"
-            @dragleave="onCardContentDragLeave($event, list.id)"
-            @drop="onCardDrop($event, list.id)"
-          >
-            <div 
-              v-for="(card, cardIndex) in getCardsByList(list.id)" 
-              :key="card.id"
-              class="card"
-              :data-card-id="card.id"
-              :data-card-index="cardIndex"
-              :data-source-list="list.id"
-              :class="{
+          <div class="content" @dragover="onCardContentDragOver($event, list.id)"
+            @dragleave="onCardContentDragLeave($event, list.id)" @drop="onCardDrop($event, list.id)">
+            <div v-for="(card, cardIndex) in getCardsByList(list.id)" :key="card.id" class="card"
+              :data-card-id="card.id" :data-card-index="cardIndex" :data-source-list="list.id" :class="{
                 'card-dragging': draggedCard && draggedCard.id === card.id,
                 'drag-over-card': dragOverTarget && dragOverTarget.cardId === card.id && dragOverTarget.position === 'before',
                 'drag-over-card-after': dragOverTarget && dragOverTarget.cardId === card.id && dragOverTarget.position === 'after'
-              }"
-              draggable="true"
-              @dragstart="onCardDragStart($event, card, cardIndex, list.id)"
-              @dragend="onCardDragEnd"
-              @dragover="onCardDragOverCard($event, card, cardIndex, list.id)"
+              }" draggable="true" @dragstart="onCardDragStart($event, card, cardIndex, list.id)"
+              @dragend="onCardDragEnd" @dragover="onCardDragOverCard($event, card, cardIndex, list.id)"
               @dragleave="onCardDragLeaveCard($event, card, cardIndex, list.id)"
-              @drop="onCardDropOnCard($event, card, cardIndex, list.id)"
-              @click.stop="openCardPopup(card.id)"
-              @contextmenu.stop="showContextMenu($event, card)"
-            >
-              <div class="card-title">{{ card.name }}</div>
+              @drop="onCardDropOnCard($event, card, cardIndex, list.id)" @click.stop="openCardPopup(card.id)"
+              @contextmenu.stop="showContextMenu($event, card)">
+              <div class="card-title">
+                <template v-for="(item,index) in card.labels ">
+                  <LabelBar :labelKey="card.labels[index].color" :show-label="true" :display-value="main.labelNames[card.labels[index].color]" :labelColorMap="labelColorMap" />
+                <hr/>
+                  
+                </template>
+                {{ card.name }}
+
+              </div>
             </div>
-            <div 
-              v-if="getCardsByList(list.id).length === 0"
-              class="empty-list-hint"
-            >
+            <div v-if="getCardsByList(list.id).length === 0" class="empty-list-hint">
               Drop cards here
             </div>
-           
+
           </div>
           <!-- Footer -->
           <div class="footer">
             <!-- Add Card Button -->
-            <div  v-if="!addingCardToListId || addingCardToListId !== list.id"  class="add-card-button"  @click.stop="showAddCardInput(list.id)">+ Add a card</div>
+            <div v-if="!addingCardToListId || addingCardToListId !== list.id" class="add-card-button"
+              @click.stop="showAddCardInput(list.id)">+ Add a card</div>
             <!-- Add Card Input -->
             <div v-else class="add-card-form" @click.stop>
-              <input ref="cardInput" v-model="newCardName" type="text" class="add-card-input" placeholder="Enter card title..."  @keyup.enter="addCard(list.id)"  @keyup.escape="cancelAddCard"/>
+              <input ref="cardInput" v-model="newCardName" type="text" class="add-card-input"
+                placeholder="Enter card title..." @keyup.enter="addCard(list.id)" @keyup.escape="cancelAddCard" />
               <div class="add-card-actions">
-                <button  class="add-card-submit"   @click="addCard(list.id)"  :disabled="!newCardName.trim()">
+                <button class="add-card-submit" @click="addCard(list.id)" :disabled="!newCardName.trim()">
                   Add Card
                 </button>
                 <button class="add-card-cancel" @click="cancelAddCard">✕</button>
@@ -109,12 +106,13 @@
           <!-- EOL -->
         </div>
       </template>
-    
+
       <!-- Add New List Section -->
       <div class="list-item add-list-item">
         <div v-if="!isAddingList" class="add-list-button" @click="showAddListInput">+ Add another list</div>
         <div v-else class="add-list-form" @click.stop>
-          <input ref="listInput" v-model="newListName" type="text" class="add-list-input" placeholder="Enter list title..." @keyup.enter="addList" @keyup.escape="cancelAddList"/>
+          <input ref="listInput" v-model="newListName" type="text" class="add-list-input"
+            placeholder="Enter list title..." @keyup.enter="addList" @keyup.escape="cancelAddList" />
           <div class="add-list-actions">
             <button class="add-list-submit" @click="addList" :disabled="!newListName.trim()">Add List</button>
             <button class="add-list-cancel" @click="cancelAddList">✕</button>
@@ -125,22 +123,13 @@
       <div>&nbsp;</div>
 
     </div>
-    
     <!-- Context Menu -->
-    <div 
-      v-if="showContextMenuFlag"
-      class="context-menu"
-      :style="{ top: contextMenuY + 'px', left: contextMenuX + 'px' }"
-      @click.stop
-    >
-      <div class="context-menu-item" >
-            <input 
-              type="date" 
-              v-model="this.main.cards.find(c => c.id === this.contextMenuCard.id).dueDate"
-              class="date-picker-input"
-              :class="{ 'no-date': !selectedCard.dueDate }"
-              :data-placeholder="selectedCard.dueDate ? '' : 'No due date'"
-            />
+    <div v-if="showContextMenuFlag" class="context-menu"
+      :style="{ top: contextMenuY + 'px', left: contextMenuX + 'px' }" @click.stop>
+      <div class="context-menu-item">
+        <input type="date" v-model="this.main.cards.find(c => c.id === this.contextMenuCard.id).dueDate"
+          class="date-picker-input" :class="{ 'no-date': !selectedCard.dueDate }"
+          :data-placeholder="selectedCard.dueDate ? '' : 'No due date'" />
       </div>
       <div class="context-menu-item" @click="archiveCard">
         <span class="context-menu-icon">📦</span>
@@ -168,7 +157,7 @@
         Move Bottom
       </div>
     </div>
-    
+
     <!-- Popup -->
     <div v-if="showPopup" class="popup-overlay" @click="closePopup">
       <div class="popup-content" @click.stop>
@@ -177,13 +166,31 @@
           <h2><span>{{ getListName(selectedCard.idList) }}</span> &#129154; {{ selectedCard.name }}</h2>
           <button class="close-btn" @click="closePopup">×</button>
         </div>
-        
         <!-- Scrollable Body -->
         <div class="popup-body">
+          <div class="popup-field mb-3">
+            <vue-tags-input  class="tags-input-dark"
+                :value="this.selectedCard.tags"
+                :existing-tags="this.tagStorage"
+                placeholder="Search or add tag..."
+                :typeahead="true"
+                :limit="10"
+                :typeahead-max-results="4"
+                typeahead-style="dropdown"
+                @tag-added="slug => handleTagsChanged(slug, selectedCard)"
+              />
+          </div>
+
+          
+
           <div class="popup-field">
             <label>Description:</label>
             <textarea v-model="selectedCard.desc" placeholder="Add a more detailed description..."></textarea>
           </div>
+          <pre>
+         
+
+          </pre>
 
           <div class="popup-field">
             <label>Due Date:</label>
@@ -192,29 +199,22 @@
                 <p class="due-date-text mb-0">{{ selectedCard.dueDate || 'No due date' }}</p>
               </div>
               <div class="col-6 col-md-4">
-                <input  type="date"  v-model="selectedCard.dueDate" class="date-picker-input form-control" :class="{ 'no-date': !selectedCard.dueDate }" :data-placeholder="selectedCard.dueDate ? '' : 'No due date'" />
+                <input type="date" v-model="selectedCard.dueDate" class="date-picker-input form-control"
+                  :class="{ 'no-date': !selectedCard.dueDate }"
+                  :data-placeholder="selectedCard.dueDate ? '' : 'No due date'" />
               </div>
             </div>
           </div>
-          
+
           <div v-if="getCardChecklists(selectedCard.idChecklists).length > 0" class="popup-field">
             <label>Checklists:</label>
-            <div v-for="checklist in getCardChecklists(selectedCard.idChecklists)" :key="checklist.id"class="checklist">
-              <div class="checklist-title"><input class="rename-input p-2" v-model="checklist.name "/></div>
+            <div v-for="checklist in getCardChecklists(selectedCard.idChecklists)" :key="checklist.id"
+              class="checklist">
+              <div class="checklist-title"><input class="rename-input p-2" v-model="checklist.name" /></div>
               <div class="checklist-items">
-                <div 
-                  v-for="item in checklist.checkItems" 
-                  :key="item.id"
-                  class="checklist-item"
-                >
-                  <input 
-                    type="checkbox" 
-                    v-model="item.state"
-                    :id="item.id"
-                    class="checklist-checkbox"
-                    :true-value="'complete'"
-                    :false-value="'incomplete'"
-                  />
+                <div v-for="item in checklist.checkItems" :key="item.id" class="checklist-item">
+                  <input type="checkbox" v-model="item.state" :id="item.id" class="checklist-checkbox"
+                    :true-value="'complete'" :false-value="'incomplete'" />
                   <label :for="item.id" class="checklist-label">{{ item.name }}</label>
                   <button class="btn btn-sm">dd</button>
                   <button class="btn btn-sm">dd</button>
@@ -224,7 +224,7 @@
             </div>
           </div>
         </div>
-        
+
       </div>
     </div>
 
@@ -232,8 +232,15 @@
 </template>
 
 <script>
+import VueTagsInput from '@voerro/vue-tagsinput'
+import '@voerro/vue-tagsinput/dist/style.css'
+import LabelBar from './LabelBar.vue';
+
 export default {
   name: 'Viewer',
+  components: {
+    VueTagsInput,LabelBar
+  },
   data() {
     return {
       main: this.export_data && this.export_data.length > 1 ? JSON.parse(this.export_data) : { lists: [], cards: [], checklists: [] },
@@ -241,44 +248,44 @@ export default {
       activeSettingsPanel: null, // Track which list's panel is open
       renamingIndex: null, // Track which list is being renamed
       renameValue: '', // Store the new name value
-            
+
       isDragging: false,
       startX: 0,
       scrollLeft: 0,
-      
+
       // List drag and drop
       draggedListIndex: null,
-      
+
       // Card drag and drop
       draggedCard: null,
       draggedCardSourceList: null,
       draggedCardIndex: null,
       draggedOverListId: null,
       dragOverTarget: null,
-      
+
       // Add card functionality
       addingCardToListId: null,
       newCardName: '',
       cardIdCounter: Date.now(),
-      
+
       // Add list functionality
       isAddingList: false,
       newListName: '',
       listIdCounter: Date.now(),
-      
+
       // Context menu
       showContextMenuFlag: false,
       contextMenuX: 0,
       contextMenuY: 0,
       contextMenuCard: null,
-      
+
       showPopup: false,
       selectedCard: {}
     };
   },
   props: {
-    is_archived:{
-      default:false,
+    is_archived: {
+      default: false,
       type: Boolean,
       required: true
     },
@@ -286,6 +293,9 @@ export default {
       default: null,
       type: String,
       required: true
+    },
+    labelColorMap:{
+      required:true
     }
   },
   watch: {
@@ -309,6 +319,33 @@ export default {
     document.removeEventListener('click', this.closeRenameOnClickOutside);
   },
   methods: {
+    handleTagsChanged(newTag,selectedCard) {
+
+      if(selectedCard.tags) {
+
+        let tagExists = selectedCard.tags.some(tag => tag.value === newTag.value);
+        if(!tagExists) {
+          selectedCard.tags.push({"key": '', "value": newTag.value});
+        }
+
+      } else {
+        selectedCard.tags = [];
+        selectedCard.tags.push({"key": '', "value": newTag.value});
+      }
+
+      if(this.main.exiting_tags){
+        let tagExists = this.main.exiting_tags.some(tag => tag.value === newTag.value);
+        if(!tagExists) {
+          this.main.exiting_tags.push({"key": '',"value":newTag.value})
+        }
+      }else{
+        this.main.exiting_tags = [];
+        this.main.exiting_tags.push({"key":'' ,"value":newTag.value})
+      }
+
+
+  },
+
     /* list settings */
     toggleSettingsPanel(index) {
       if (this.activeSettingsPanel === index) {
@@ -317,9 +354,9 @@ export default {
         this.activeSettingsPanel = index; // Open this one
       }
     },
-    
+
     /* Renaming */
-    startRename(index,event) {
+    startRename(index, event) {
       event.stopPropagation(); // Prevent event from bubbling
       this.renamingIndex = index;
       this.renameValue = this.main.lists[index].name;
@@ -346,42 +383,42 @@ export default {
     },
     closeRenameOnClickOutside(e) {
       // Check if click is outside the rename input
-      if ( !e.target.closest('.rename-input') != null  ) {
+      if (!e.target.closest('.rename-input') != null) {
         this.cancelRename();
       }
     },
     /* RenamingEnd */
 
-    addListAfter(index){
+    addListAfter(index) {
       this.newListName = this.default_list_name;
-      this.addList(index+1)
+      this.addList(index + 1)
     },
-    addListBefore(index){
+    addListBefore(index) {
       this.newListName = this.default_list_name;
-      this.addList(index-1)
+      this.addList(index - 1)
     },
     moveListUp(index) {
       const lists = this.main.lists;
       const currentList = lists[index];
-      
+
       // Find the previous non-closed list
       let prevIndex = index - 1;
       while (prevIndex >= 0 && lists[prevIndex].closed) {
         prevIndex--;
       }
-      
+
       if (prevIndex < 0) return; // No non-closed list above
-      
+
       // Swap
       const temp = lists[index];
       lists[index] = lists[prevIndex];
       lists[prevIndex] = temp;
-      
+
       // Update positions
       lists.forEach((list, i) => {
         if (!list.closed) list.pos = i * 65535;
       });
-      
+
       this.main.lists = [...lists];
       this.closePanel();
     },
@@ -389,29 +426,29 @@ export default {
     moveListDown(index) {
       const lists = this.main.lists;
       const currentList = lists[index];
-      
+
       // Find the next non-closed list
       let nextIndex = index + 1;
       while (nextIndex < lists.length && lists[nextIndex].closed) {
         nextIndex++;
       }
-      
+
       if (nextIndex >= lists.length) return; // No non-closed list below
-      
+
       // Swap
       const temp = lists[index];
       lists[index] = lists[nextIndex];
       lists[nextIndex] = temp;
-      
+
       // Update positions
       lists.forEach((list, i) => {
         if (!list.closed) list.pos = i * 65535;
       });
-      
+
       this.main.lists = [...lists];
       this.closePanel();
-    },  
-    removeColor(index){
+    },
+    removeColor(index) {
       this.main.lists[index].color = null
     },
     duplicateList(index) {
@@ -437,7 +474,7 @@ export default {
         this.closePanel();
       }
     },
-    closePanel(){
+    closePanel() {
       this.activeSettingsPanel = null;
     },
     /* list settings */
@@ -447,12 +484,12 @@ export default {
       if (!this.main.cards) return 0;
       return this.main.cards.filter(c => c.idList === listId && !c.closed).length;
     },
-    
+
     getCardsByList(listId) {
       if (!this.main.cards) return [];
       return this.main.cards.filter(c => c.idList === listId && !c.closed).sort((a, b) => a.pos - b.pos);
     },
-    
+
     // Context Menu Methods
     showContextMenu(event, card) {
       event.preventDefault();
@@ -461,12 +498,12 @@ export default {
       this.contextMenuY = event.clientY;
       this.contextMenuCard = card;
     },
-    
+
     closeContextMenu() {
       this.showContextMenuFlag = false;
       this.contextMenuCard = null;
     },
-    
+
     archiveCard() {
       if (this.contextMenuCard) {
         const card = this.main.cards.find(c => c.id === this.contextMenuCard.id);
@@ -478,7 +515,7 @@ export default {
       }
       this.closeContextMenu();
     },
-    
+
     // Generate unique ID for new cards
     generateCardId() {
       let newId;
@@ -487,10 +524,19 @@ export default {
         const timestamp = Math.floor(Date.now() / 1000).toString(16).padStart(8, '0');
         const random1 = Math.random().toString(16).substring(2, 10);
         const random2 = Math.random().toString(16).substring(2, 10);
-        newId = timestamp + random1 + random2;
+        newId = timestamp + random1 + random2 ;
       } while (this.main.cards && this.main.cards.some(card => card.id === newId));
-      
+
       return newId;
+    },
+
+    generateTagId() {
+
+        // 24 hex characters like Trello
+        const timestamp = Math.floor(Date.now() / 1000).toString(16).padStart(8, '0');
+        const random1 = Math.random().toString(16).substring(2, 10);
+        const random2 = Math.random().toString(16).substring(2, 10);
+        return 'T'+timestamp + random1 + random2 ;
     },
 
     // Generate unique ID for new lists
@@ -502,17 +548,17 @@ export default {
         const random2 = Math.random().toString(16).substring(2, 10);
         newId = timestamp + random1 + random2;
       } while (this.main.lists && this.main.lists.some(list => list.id === newId));
-      
+
       return newId;
     },
-    
+
     // Generate short ID
     generateShortId() {
       if (!this.main.cards) return 1;
       const maxShortId = Math.max(...this.main.cards.map(c => c.idShort || 0), 0);
       return maxShortId + 1;
     },
-    
+
     // Calculate position for new card
     calculateNewCardPos(listId) {
       const cardsInList = this.main.cards.filter(c => c.idList === listId && !c.closed);
@@ -520,18 +566,18 @@ export default {
       const maxPos = Math.max(...cardsInList.map(c => c.pos || 0));
       return maxPos + 65535;
     },
-    
+
     // Calculate position for new list
     calculateNewListPos() {
       if (!this.main.lists || this.main.lists.length === 0) return 65535;
       const maxPos = Math.max(...this.main.lists.map(l => l.pos || 0));
       return maxPos + 65535;
     },
-    
+
     showAddCardInput(listId) {
       this.addingCardToListId = listId;
       this.newCardName = '';
-      
+
       this.$nextTick(() => {
         const inputs = this.$refs.cardInput;
         if (inputs) {
@@ -540,18 +586,18 @@ export default {
         }
       });
     },
-    
+
     addCard(listId) {
       const cardName = this.newCardName.trim();
       if (!cardName) return;
-      
+
       const cardId = this.generateCardId();
       const shortId = this.generateShortId();
       const now = new Date().toISOString();
       const pos = this.calculateNewCardPos(listId);
-      
+
       const list = this.main.lists.find(l => l.id === listId);
-      
+
       const newCard = {
         id: cardId,
         address: null,
@@ -584,6 +630,7 @@ export default {
           viewingMemberVoted: false,
           subscribed: false
         },
+        tags:[],
         checkItemStates: [],
         closed: false,
         coordinates: null,
@@ -674,19 +721,19 @@ export default {
         pluginData: [],
         customFieldItems: []
       };
-      
+
       if (!this.main.cards) {
         this.main.cards = [];
       }
       this.main.cards.push(newCard);
       this.main.cards = [...this.main.cards];
-      
+
       this.addingCardToListId = null;
       this.newCardName = '';
-      
+
       this.$emit('card-added', { card: newCard, listId });
     },
-    
+
     generateShortLink() {
       const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       let result = '';
@@ -695,17 +742,17 @@ export default {
       }
       return result;
     },
-    
+
     cancelAddCard() {
       this.addingCardToListId = null;
       this.newCardName = '';
     },
-    
+
     // Add List Methods
     showAddListInput() {
       this.isAddingList = true;
       this.newListName = '';
-      
+
       this.$nextTick(() => {
         const inputs = this.$refs.listInput;
         if (inputs) {
@@ -714,19 +761,19 @@ export default {
         }
       });
     },
-    
+
 
 
     addList(insertIndex = null) {
       const listName = this.newListName.trim();
       if (!listName) return;
-      
+
       const listId = this.generateListId();
       const pos = this.calculateNewListPos();
-      
+
       // Get board and organization from existing lists
       const existingList = this.main.lists && this.main.lists.length > 0 ? this.main.lists[0] : null;
-      
+
       const newList = {
         id: listId,
         name: listName,
@@ -758,11 +805,11 @@ export default {
         },
         nodeId: `/workspace/${existingList?.idOrganization || ""}/${listId}`
       };
-      
+
       if (!this.main.lists) {
         this.main.lists = [];
       }
-      
+
       if (insertIndex !== null) {
         // Clamp index between 0 and lists length
         const clampedIndex = Math.max(0, Math.min(insertIndex, this.main.lists.length));
@@ -770,31 +817,31 @@ export default {
       } else {
         this.main.lists.push(newList);
       }
-      
+
       this.main.lists = [...this.main.lists];
-      
+
       this.isAddingList = false;
       this.newListName = '';
-      
+
       this.$emit('list-added', { list: newList });
     },
-    
+
     cancelAddList() {
       this.isAddingList = false;
       this.newListName = '';
     },
-    
+
     // List drag and drop methods
     onListDragStart(event, index) {
       if (!event.target.closest('.header')) {
         event.preventDefault();
         return false;
       }
-      
+
       this.draggedListIndex = index;
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.setData('text/plain', `list-${index}`);
-      
+
       const dragElement = event.target.closest('.list-item');
       if (dragElement) {
         const clone = dragElement.cloneNode(true);
@@ -809,36 +856,36 @@ export default {
         event.dataTransfer.setDragImage(clone, 20, 20);
         setTimeout(() => document.body.removeChild(clone), 0);
       }
-      
+
       return true;
     },
-    
+
     onListDragEnd() {
       this.draggedListIndex = null;
     },
-    
+
     onListDragOver(event, index) {
       event.preventDefault();
       event.dataTransfer.dropEffect = 'move';
-      
+
       if (this.draggedListIndex === null) return;
       if (this.draggedListIndex === index) return;
-      
+
       const draggedList = this.main.lists[this.draggedListIndex];
       const newLists = [...this.main.lists];
-      
+
       newLists.splice(this.draggedListIndex, 1);
-      
+
       let newIndex = index;
       if (this.draggedListIndex < index) {
         newIndex = index - 1;
       }
-      
+
       newLists.splice(newIndex, 0, draggedList);
       this.main.lists = newLists;
       this.draggedListIndex = newIndex;
     },
-    
+
     onListDrop(event, index) {
       event.preventDefault();
       if (this.draggedListIndex !== null) {
@@ -853,14 +900,14 @@ export default {
       this.draggedCard = card;
       this.draggedCardSourceList = sourceListId;
       this.draggedCardIndex = cardIndex;
-      
+
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.setData('text/plain', JSON.stringify({
         cardId: card.id,
         sourceList: sourceListId,
         cardIndex: cardIndex
       }));
-      
+
       return true;
     },
 
@@ -875,13 +922,13 @@ export default {
     onCardContentDragOver(event, listId) {
       event.preventDefault();
       event.dataTransfer.dropEffect = 'move';
-      
+
       if (!this.draggedCard) return;
-      
+
       if (this.draggedCardSourceList !== listId) {
         this.draggedOverListId = listId;
       }
-      
+
       const cards = this.getCardsByList(listId);
       if (cards.length === 0) {
         this.dragOverTarget = null;
@@ -908,47 +955,47 @@ export default {
       event.preventDefault();
       event.stopPropagation();
       event.dataTransfer.dropEffect = 'move';
-      
+
       if (!this.draggedCard) return;
       if (this.draggedCard.id === targetCard.id) return;
-      
+
       this.draggedOverListId = null;
-      
+
       const targetElement = event.currentTarget;
       const rect = targetElement.getBoundingClientRect();
       const mouseY = event.clientY;
       const relativePosition = (mouseY - rect.top) / rect.height;
-      
+
       const position = relativePosition <= 0.5 ? 'before' : 'after';
-      
+
       this.dragOverTarget = {
         cardId: targetCard.id,
         position: position
       };
-      
+
       if (this.draggedCardSourceList === targetListId) {
         let newIndex = targetIndex;
         if (position === 'after') {
           newIndex = targetIndex + 1;
         }
-        
+
         let adjustedNewIndex = newIndex;
         if (this.draggedCardIndex < newIndex) {
           adjustedNewIndex = newIndex - 1;
         }
-        
+
         if (adjustedNewIndex !== this.draggedCardIndex) {
           const listCards = this.main.cards
             .filter(c => c.idList === targetListId && !c.closed)
             .sort((a, b) => a.pos - b.pos);
-          
+
           const [movedCard] = listCards.splice(this.draggedCardIndex, 1);
           listCards.splice(adjustedNewIndex, 0, movedCard);
-          
+
           listCards.forEach((card, idx) => {
             card.pos = idx;
           });
-          
+
           this.main.cards = [...this.main.cards];
           this.draggedCardIndex = adjustedNewIndex;
         }
@@ -967,14 +1014,14 @@ export default {
     onCardDropOnCard(event, targetCard, targetIndex, targetListId) {
       event.preventDefault();
       event.stopPropagation();
-      
+
       if (!this.draggedCard) return;
-      
+
       if (this.draggedCardSourceList === targetListId) {
-        this.$emit('card-reordered', { 
-          card: this.draggedCard, 
-          fromIndex: this.draggedCardIndex, 
-          toIndex: targetIndex 
+        this.$emit('card-reordered', {
+          card: this.draggedCard,
+          fromIndex: this.draggedCardIndex,
+          toIndex: targetIndex
         });
       } else {
         const position = this.dragOverTarget?.position || 'after';
@@ -982,111 +1029,111 @@ export default {
         if (position === 'after') {
           insertIndex = targetIndex + 1;
         }
-        
+
         this.moveCardToDifferentList(this.draggedCard, this.draggedCardSourceList, targetListId, insertIndex);
       }
-      
+
       this.draggedCard = null;
       this.draggedCardSourceList = null;
       this.draggedCardIndex = null;
       this.draggedOverListId = null;
       this.dragOverTarget = null;
     },
-    
+
     onCardDrop(event, targetListId) {
       event.preventDefault();
-      
+
       if (!this.draggedCard) return;
-      
+
       this.moveCardToList(this.draggedCard, this.draggedCardSourceList, targetListId);
-      
+
       this.draggedCard = null;
       this.draggedCardSourceList = null;
       this.draggedCardIndex = null;
       this.draggedOverListId = null;
       this.dragOverTarget = null;
     },
-    
+
     reorderCardInSameList(card, fromIndex, toIndex) {
       if (fromIndex === toIndex) return;
-      
+
       const listCards = this.main.cards
         .filter(c => c.idList === card.idList && !c.closed)
         .sort((a, b) => a.pos - b.pos);
-      
+
       const [movedCard] = listCards.splice(fromIndex, 1);
       listCards.splice(toIndex, 0, movedCard);
-      
+
       listCards.forEach((card, idx) => {
         card.pos = idx;
       });
-      
+
       this.main.cards = [...this.main.cards];
-      
+
       console.log(`Moved card from ${fromIndex} to ${toIndex}`);
       this.$emit('card-reordered', { card, fromIndex, toIndex });
     },
-    
+
     moveCardToList(card, sourceListId, targetListId) {
       const actualCard = this.main.cards.find(c => c.id === card.id);
       if (actualCard) {
         actualCard.idList = targetListId;
-        
+
         const targetCards = this.main.cards.filter(c => c.idList === targetListId && !c.closed);
         targetCards.forEach((card, idx) => {
           card.pos = idx;
         });
-        
+
         const sourceCards = this.main.cards.filter(c => c.idList === sourceListId && !c.closed);
         sourceCards.forEach((card, idx) => {
           card.pos = idx;
         });
-        
+
         this.main.cards = [...this.main.cards];
       }
-      
+
       this.$emit('card-moved', { card, sourceListId, targetListId });
     },
-    
+
     moveCardToDifferentList(card, sourceListId, targetListId, targetIndex) {
       const actualCard = this.main.cards.find(c => c.id === card.id);
       if (!actualCard) return;
-      
+
       actualCard.idList = targetListId;
-      
+
       const targetCards = this.main.cards.filter(c => c.idList === targetListId && !c.closed);
-      
+
       let currentIndex = targetCards.findIndex(c => c.id === card.id);
-      
+
       if (currentIndex !== -1) {
         targetCards.splice(currentIndex, 1);
       }
-      
+
       let insertAt = Math.min(targetIndex, targetCards.length);
       targetCards.splice(insertAt, 0, actualCard);
-      
+
       targetCards.forEach((card, idx) => {
         card.pos = idx;
       });
-      
+
       const sourceCards = this.main.cards.filter(c => c.idList === sourceListId && !c.closed);
       sourceCards.forEach((card, idx) => {
         card.pos = idx;
       });
-      
+
       this.main.cards = [...this.main.cards];
-      
+
       this.$emit('card-moved', { card, sourceListId, targetListId, targetIndex });
     },
-    
+
     startDrag(e) {
       if (e.target === this.$el || (this.$el.contains(e.target) && e.target === this.$el)) {
         this.isDragging = true;
         this.startX = e.pageX - this.$el.offsetLeft;
-        this.scrollLeft = this.$el.scrollLeft;       
+        this.scrollLeft = this.$el.scrollLeft;
       }
     },
-    
+
     onDrag(e) {
       if (!this.isDragging) return;
       e.preventDefault();
@@ -1094,11 +1141,11 @@ export default {
       const walk = (x - this.startX) * 2;
       this.$el.scrollLeft = this.scrollLeft - walk;
     },
-    
+
     stopDrag(e) {
       this.isDragging = false;
     },
-    
+
     openCardPopup(cardId) {
       const card = this.main.cards.find(c => c.id === cardId);
       if (card) {
@@ -1106,24 +1153,32 @@ export default {
         this.showPopup = true;
       }
     },
-    
+
     closePopup() {
       this.showPopup = false;
       this.selectedCard = {};
     },
-    
+
     getListName(listId) {
       if (!this.main.lists) return 'Unknown list';
       const list = this.main.lists.find(l => l.id === listId);
       return list ? list.name : 'Unknown list';
     },
-    
+
     getCardChecklists(checklistIds) {
       if (!checklistIds || checklistIds.length === 0 || !this.main.checklists) return [];
-      return this.main.checklists.filter(checklist => 
+      return this.main.checklists.filter(checklist =>
         checklistIds.includes(checklist.id)
       );
     }
-  }
+  },
+  computed: {
+   tagStorage() {
+      if(!this.main.exiting_tags){
+        this.main.exiting_tags = []
+      }
+      return this.main.exiting_tags
+   }
+  },
 };
 </script>
