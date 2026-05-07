@@ -1,10 +1,13 @@
 <template>
-  <div class="label-bar" :style="{ 'background': backgroundColor }">
-    <svg
+  
+    <template v-if="!versionSmall">
+      <div class="label-bar" 
+  :style="{ 'background': backgroundColor, 'height': barHeight, 'width':'150px','display':'flex','border-radius':'0.2rem'}">
+      <svg
       class="trello-sidebar-label-svg" 
       :data-label-key="labelKey" 
-      width="28" 
-      height="28" 
+      :width="barHeight" 
+      :height="barHeight" 
       viewBox="0 0 44 44"
       v-html="labelSVG"
     ></svg>
@@ -13,6 +16,18 @@
       <small v-if="showLabel" class="p-1">{{ displayValue }}</small>
     </div>
   </div>
+
+    </template>
+    <template v-else=>
+      <svg
+      class="trello-sidebar-label-svg" 
+      :data-label-key="labelKey" 
+      :width="15" 
+      :height="15" 
+      viewBox="0 0 44 44"
+      v-html="labelSVG"
+    ></svg>
+    </template>
 </template>
 
 <script>
@@ -40,6 +55,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    versionSmall:{
+      type: Boolean,
+      default: false,
+    },
     labelColorMap: {
       type: Object,
       required: true,
@@ -54,6 +73,9 @@ export default {
     labelSVG() {
       if (!this.labelKey) return '';
       return this.generateLabelSVG(this.labelKey);
+    },
+    barHeight(){
+      return !this.showNone ? '32px' : '22px';
     }
   },
   methods: {
@@ -181,12 +203,6 @@ export default {
 </script>
 
 <style scoped>
-.label-bar{
-  width:150px;
-  height:28px;
-  display:flex;
-  border-radius:.2rem;
-}
 
 .trello-sidebar-label-svg {
   display: block;

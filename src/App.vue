@@ -37,8 +37,14 @@
           <button @click="ClearLocalStorage" class="btn btn-sm btn-outline-danger me-2 text-nowrap">🗑️ Clear</button>
 
           <div class="form-check form-switch d-flex align-items-center ms-3 text-nowrap">
-            <input type="checkbox" v-model="autoSaveCheckbox" class="form-check-input" id="closedSwitch" />
-            <label class="form-check-label ms-2 text-light" for="closedSwitch">Auto Save</label>
+            <input type="checkbox" v-model="autoSaveCheckbox" class="form-check-input" id="autoSaveCheckbox" />
+            <label class="form-check-label ms-2 text-light" for="autoSaveCheckbox">Auto Save</label>
+          </div>
+
+
+          <div class="form-check form-switch d-flex align-items-center ms-3 text-nowrap">
+            <input type="checkbox" v-model="labelNameCheckbox" class="form-check-input" id="labelNameCheckbox" />
+            <label class="form-check-label ms-2 text-light" for="labelNameCheckbox">Hide Label name</label>
           </div>
 
           <div class="form-check form-switch d-flex align-items-center ms-3 text-nowrap">
@@ -82,22 +88,22 @@
             <label>Board Name:</label>
             <input v-model="this.$refs.viewerRef.main.name" type="text" class="form-control" />
           </div>
-          <div class="sidebar-field">
-            <label>Lists: {{ this.$refs.viewerRef.main.lists.length }}</label>
+          <div class="sidebar-field" v-if="this.$refs.viewerRef.main.lists">
+            <label>Lists: {{ this.$refs.viewerRef.main.lists.length ?? 0}}</label>
           </div>
-          <div class="sidebar-field">
-            <label>Cards: {{ this.$refs.viewerRef.main.cards.length }}</label>
+          <div class="sidebar-field" v-if="this.$refs.viewerRef.main.cards">
+            <label>Cards: {{ this.$refs.viewerRef.main.cards.length ?? 0 }}</label>
           </div>
-          <div class="sidebar-field">
-            <label>checklist: {{ this.$refs.viewerRef.main.checklists.length }}</label>
+          <div class="sidebar-field" v-if="this.$refs.viewerRef.main.checklists">
+            <label>checklist: {{ this.$refs.viewerRef.main.checklists.length ?? 0}}</label>
           </div>
-          <div class="sidebar-field">
-            <label>tags: {{ this.$refs.viewerRef.main.exiting_tags.length }}</label>
+          <div class="sidebar-field" v-if="this.$refs.viewerRef.main.exiting_tags">
+            <label>tags: {{ this.$refs.viewerRef.main.exiting_tags.length ?? 0}}</label>
           </div>
-          <div class="sidebar-field">
+          <div class="sidebar-field" v-if="this.$refs.viewerRef.main.dateLastActivity">
             <label>dateLastActivity: {{ formatDate(this.$refs.viewerRef.main.dateLastActivity) }}</label>
           </div>
-          <div class="sidebar-field">
+          <div class="sidebar-field" v-if="this.$refs.viewerRef.main.dateLastActivity">
             <label>dateLastView: {{ formatDate(this.$refs.viewerRef.main.dateLastActivity) }}</label>
           </div>
 
@@ -113,17 +119,16 @@
 
         <!-- Label Tab -->
         <div v-if="activeTab === 'label' && this.$refs.viewerRef"" class=" tab-panel">
-          <h5>Labels</h5>
+          <h5>Default Labels</h5>
           <div class="trello-sidebar-labels-list">
-            <div v-for="(value, key) in this.$refs.viewerRef.main.labelNames" :key="key"
+            <div  v-for="(value, key) in this.$refs.viewerRef.main.labelNames" :key="key"
               class="trello-sidebar-label-item">
               <div class="trello-sidebar-label-visual">
                 <LabelBar :labelKey="key" :labelColorMap="labelColorMap" />
               </div>
               <div class="trello-sidebar-label-info">
               </div>
-              <input v-model="this.$refs.viewerRef.main.labelNames[key]" type="text" class="trello-sidebar-label-input"
-                :placeholder="'Set a Name'" />
+              <input v-model="this.$refs.viewerRef.main.labelNames[key]" type="text" class="trello-sidebar-label-input" :placeholder="'Set a Name'" />
             </div>
           </div>
           <div class="text-muted">No tags found</div>
@@ -134,7 +139,7 @@
     <!-- Sidebar Overlay -->
     <div v-if="sidebarOpen" class="sidebar-overlay" @click="toggleSidebar"></div>
 
-    <Viewer ref="viewerRef" :labelColorMap="labelColorMap" :export_data="fileText" :is_archived="closedCheckbox" @update-expand="toggleCollapse" />
+    <Viewer ref="viewerRef" :labelColorMap="labelColorMap" :export_data="fileText" :is_archived="closedCheckbox" :labelNameCheckbox="labelNameCheckbox" @update-expand="toggleCollapse" />
   </section>
 
 </template>
@@ -154,6 +159,7 @@ export default {
       isExpanded: true,
       closedCheckbox: false,
       autoSaveCheckbox: true,
+      labelNameCheckbox:true,
 
       sidebarOpen: false,
       activeTab: 'main',
@@ -206,6 +212,9 @@ export default {
       this.zoomLevel = parseFloat(savedZoom);
       this.applyZoom();
     }
+  },
+  computed(){
+  
   },
   methods: {
 

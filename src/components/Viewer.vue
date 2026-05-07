@@ -1,20 +1,19 @@
 <template>
-
   <div class="scroll-container m-0 pt-5 dark-mode" @mousedown="startDrag" @mousemove="onDrag" @mouseup="stopDrag"
-    @mouseleave="stopDrag" @contextmenu.prevent>
+    @mouseleave="stopDrag">
 
     <div id="zoom-canvas" class="scroll-row px-3">
 
-      <!-- List Section -->
+      <!-- ========== LISTS (unchanged) ========== -->
       <template v-for="(list, index) in main.lists" :key="index">
         <div class="list-item" v-if="list.closed == is_archived" :data-list-index="index" :data-list-id="list.id"
           :class="{ 'dragging-source': draggedListIndex === index, 'drag-over-list': draggedOverListId === list.id && draggedCardSourceList !== list.id }">
-          <!-- Header -->
+
+          <!-- LIST HEADER (unchanged) -->
           <div class="header" draggable="true" @dragstart="onListDragStart($event, index)" @dragend="onListDragEnd"
             @dragover="onListDragOver($event, index)" @drop="onListDrop($event, index)">
 
             <div class="header-colorbar" v-if="list.color != null" :style="{ 'background-color': list.color }"></div>
-
             <div class="drag-handle">⋮⋮</div>
 
             <div class="list-title" v-if="renamingIndex !== index">
@@ -26,7 +25,7 @@
             <div class="header-dots">
               <button class="btn btn-sm" @click.stop="toggleSettingsPanel(index)"><span
                   class="d-block">⋮</span></button>
-              <!-- Settings Panel -->
+              <!-- Settings Panel (unchanged) -->
               <div v-if="activeSettingsPanel === index" class="settings-panel">
                 <div class="settings-item">
                   <button @click="startRename(index, $event)"><small>✏️ Rename</small></button>
@@ -56,11 +55,13 @@
                 </div>
               </div>
             </div>
-
           </div>
-          <!-- Content -->
+
+          <!-- CONTENT – only the cards have modifications -->
           <div class="content" @dragover="onCardContentDragOver($event, list.id)"
             @dragleave="onCardContentDragLeave($event, list.id)" @drop="onCardDrop($event, list.id)">
+
+            <!-- ===== CARD WITH TRIPLE‑DOT BUTTON ===== -->
             <div v-for="(card, cardIndex) in getCardsByList(list.id)" :key="card.id" class="card"
               :data-card-id="card.id" :data-card-index="cardIndex" :data-source-list="list.id" :class="{
                 'card-dragging': draggedCard && draggedCard.id === card.id,
@@ -69,45 +70,58 @@
               }" draggable="true" @dragstart="onCardDragStart($event, card, cardIndex, list.id)"
               @dragend="onCardDragEnd" @dragover="onCardDragOverCard($event, card, cardIndex, list.id)"
               @dragleave="onCardDragLeaveCard($event, card, cardIndex, list.id)"
-              @drop="onCardDropOnCard($event, card, cardIndex, list.id)" @click.stop="openCardPopup(card.id)"
-              @contextmenu.stop="showContextMenu($event, card)">
-              <div class="card-title">
-                <template v-for="(item,index) in card.labels ">
-                  <LabelBar :labelKey="card.labels[index].color" :show-label="true" :display-value="main.labelNames[card.labels[index].color]" :labelColorMap="labelColorMap" />
-                <hr/>
-                  
-                </template>
-                {{ card.name }}
+              @drop="onCardDropOnCard($event, card, cardIndex, list.id)" @click.stop="openCardPopup(card.id)">
 
+              <!-- Card labels and name (unchanged) -->
+              <div class="card-title">
+                <template v-for="(item, idx) in card.labels">
+                  <LabelBar class="mb-2" :labelKey="card.labels[idx].color" :show-none="labelNameCheckbox"
+                    :show-label="true"
+                    :display-value="card.labels[idx].name && card.labels[idx].name.length > 0 ? card.labels[idx].name : main.labelNames[card.labels[idx].color]"
+                    :labelColorMap="labelColorMap" />
+                </template>
+                <span>{{ card.name }}</span>
+              </div>
+
+              <!-- NEW: Triple‑dot button + dropdown -->
+              <div class="card-actions-wrapper">
+                <button class="card-menu-btn btn btn-sm" @click.stop="toggleCardMenu(card.id)"
+                  title="Card actions">⋮</button>
+
+                <div v-if="activeCardMenuId === card.id" class="card-dropdown" @click.stop>
+                  <button class="card-dropdown-item" @click.stop="openLabelPopup(card)">🏷️ Edit Labels</button>
+                  <button class="card-dropdown-item" @click.stop="moveCardUp(card)">⬆️ Move Up</button>
+                  <button class="card-dropdown-item" @click.stop="moveCardDown(card)">⬇️ Move Down</button>
+                  <button class="card-dropdown-item" @click.stop="moveCardTop(card)">⏫ Move Top</button>
+                  <button class="card-dropdown-item" @click.stop="moveCardBottom(card)">⏬ Move Bottom</button>
+                  <button class="card-dropdown-item" @click.stop="archiveCardFromMenu(card)">📦 Archive</button>
+                </div>
               </div>
             </div>
+
             <div v-if="getCardsByList(list.id).length === 0" class="empty-list-hint">
               Drop cards here
             </div>
-
           </div>
-          <!-- Footer -->
+
+          <!-- LIST FOOTER (unchanged) -->
           <div class="footer">
-            <!-- Add Card Button -->
             <div v-if="!addingCardToListId || addingCardToListId !== list.id" class="add-card-button"
               @click.stop="showAddCardInput(list.id)">+ Add a card</div>
-            <!-- Add Card Input -->
             <div v-else class="add-card-form" @click.stop>
               <input ref="cardInput" v-model="newCardName" type="text" class="add-card-input"
                 placeholder="Enter card title..." @keyup.enter="addCard(list.id)" @keyup.escape="cancelAddCard" />
               <div class="add-card-actions">
-                <button class="add-card-submit" @click="addCard(list.id)" :disabled="!newCardName.trim()">
-                  Add Card
-                </button>
+                <button class="add-card-submit" @click="addCard(list.id)" :disabled="!newCardName.trim()">Add
+                  Card</button>
                 <button class="add-card-cancel" @click="cancelAddCard">✕</button>
               </div>
             </div>
           </div>
-          <!-- EOL -->
         </div>
       </template>
 
-      <!-- Add New List Section -->
+      <!-- Add new list (unchanged) -->
       <div class="list-item add-list-item">
         <div v-if="!isAddingList" class="add-list-button" @click="showAddListInput">+ Add another list</div>
         <div v-else class="add-list-form" @click.stop>
@@ -121,113 +135,179 @@
       </div>
 
       <div>&nbsp;</div>
-
-    </div>
-    <!-- Context Menu -->
-    <div v-if="showContextMenuFlag" class="context-menu"
-      :style="{ top: contextMenuY + 'px', left: contextMenuX + 'px' }" @click.stop>
-      <div class="context-menu-item">
-        <input type="date" v-model="this.main.cards.find(c => c.id === this.contextMenuCard.id).dueDate"
-          class="date-picker-input" :class="{ 'no-date': !selectedCard.dueDate }"
-          :data-placeholder="selectedCard.dueDate ? '' : 'No due date'" />
-      </div>
-      <div class="context-menu-item" @click="archiveCard">
-        <span class="context-menu-icon">📦</span>
-        Archive Card
-      </div>
-
-      <div class="context-menu-item" @click="archiveCard">
-        <span class="context-menu-icon">📦</span>
-        Move Up
-      </div>
-
-      <div class="context-menu-item" @click="archiveCard">
-        <span class="context-menu-icon">📦</span>
-        Move Down
-      </div>
-
-      <div class="context-menu-item" @click="archiveCard">
-        <span class="context-menu-icon">📦</span>
-        Move Top
-      </div>
-
-
-      <div class="context-menu-item" @click="archiveCard">
-        <span class="context-menu-icon">📦</span>
-        Move Bottom
-      </div>
     </div>
 
-    <!-- Popup -->
+    <!-- ========== LABEL POPUP (NEW) ========== -->
+    <div v-if="showLabelPopup" class="popup-overlay" @click="closeLabelPopup">
+      <div class="popup-content label-popup" @click.stop>
+        <div class="popup-header">
+          <h2>🏷️ Labels – {{ labelPopupCard.name }}</h2>
+          <button class="close-btn" @click="closeLabelPopup">×</button>
+        </div>
+        <div class="popup-body">
+          <!-- Current labels -->
+          <div v-if="labelPopupCard.labels && labelPopupCard.labels.length > 0" class="mb-3">
+            <label class="form-label">Current labels</label>
+            <div class="label-chip-list">
+              <div v-for="label in labelPopupCard.labels" :key="label.id" class="label-chip"
+                :style="{ backgroundColor: labelColorMap[label.color] || label.color }">
+                <LabelBar v-if="label.name && label.name.length > 0" :labelKey="label.color" :show-none="false"
+                  :show-label="true" :display-value="label.name" :labelColorMap="labelColorMap" />
+                <LabelBar v-else :labelKey="label.color" :show-label="true"
+                  :display-value="main.labelNames[label.color] && main.labelNames[label.color].length > 0 ? main.labelNames[label.color] : label.color"
+                  :show-none="false" :labelColorMap="labelColorMap" />
+
+
+                <button class="btn-close-label" @click.stop="removeLabelFromCard(label.id)">×</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add new label -->
+          <hr />
+          <div class="add-label-section">
+            <label class="form-label">Pick a color</label>
+            <div class="color-palette mb-4">
+              <div v-for="(hex, key) in labelColorMap" :key="key" class="color-swatch"
+                :class="{ selected: selectedLabelColor === key }" :style="{ backgroundColor: hex }" :title="key"
+                @click="selectedLabelColor = key">
+                <LabelBar @click="selectedLabelColor = key" class="mb-2" :labelKey="key" :show-none="true"
+                  :version-small="true" :labelColorMap="labelColorMap" />
+              </div>
+              <button v-if="selectedLabelColor" class="btn btn-sm btn-outline-secondary ms-2"
+                @click="selectedLabelColor = null">Clear</button>
+            </div>
+            <label class="form-label">Optional: Add a name</label>
+            <div class="mb-2">
+              <input v-model="newLabelName" type="text" class="form-control" placeholder="Label name..."
+                @keyup.enter="addLabelToCard" />
+            </div>
+          </div>
+        </div>
+        <div class="popup-footer">
+          <button class="btn btn-primary btn-block w-100" @click="addLabelToCard">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== CARD DETAIL POPUP (unchanged) ========== -->
     <div v-if="showPopup" class="popup-overlay" @click="closePopup">
       <div class="popup-content" @click.stop>
-        <!-- Fixed Header -->
-        <div class="popup-header">
-          <h2><span>{{ getListName(selectedCard.idList) }}</span> &#129154; {{ selectedCard.name }}</h2>
-          <button class="close-btn" @click="closePopup">×</button>
-        </div>
-        <!-- Scrollable Body -->
-        <div class="popup-body">
-          <div class="popup-field mb-3">
-            <vue-tags-input  class="tags-input-dark"
-                :value="this.selectedCard.tags"
-                :existing-tags="this.tagStorage"
-                placeholder="Search or add tag..."
-                :typeahead="true"
-                :limit="10"
-                :typeahead-max-results="4"
-                typeahead-style="dropdown"
-                @tag-added="slug => handleTagsChanged(slug, selectedCard)"
-              />
-          </div>
 
-          
+        <!-- Popup -->
+        <div v-if="showPopup" class="popup-overlay" @click="closePopup">
+          <div class="popup-content" @click.stop>
+            <!-- Fixed Header -->
+            <div class="popup-header">
+              <h2><span>{{ getListName(selectedCard.idList) }}</span> &#129154; {{ selectedCard.name }}</h2>
+              <button class="close-btn" @click="closePopup">×</button>
+            </div>
+            <!-- Scrollable Body -->
+            <div class="popup-body">
+              <div class="popup-field mb-3">
+                <vue-tags-input class="tags-input-dark" :value="this.selectedCard.tags"
+                  :existing-tags="this.main.exiting_tags" placeholder="Search or add tag..." :typeahead="true"
+                  :limit="10" :typeahead-max-results="4" typeahead-style="dropdown"
+                  @tag-added="slug => handleTagsChanged(slug, selectedCard)" />
+              </div>
 
-          <div class="popup-field">
-            <label>Description:</label>
-            <textarea v-model="selectedCard.desc" placeholder="Add a more detailed description..."></textarea>
-          </div>
-          <pre>
-         
+
+
+              <div class="popup-field">
+                <label>Description:</label>
+                <textarea v-model="selectedCard.desc" placeholder="Add a more detailed description..."></textarea>
+              </div>
+              <pre>
+
 
           </pre>
 
-          <div class="popup-field">
-            <label>Due Date:</label>
-            <div class="row g-2 align-items-center">
-              <div class="col-6 col-md-8">
-                <p class="due-date-text mb-0">{{ selectedCard.dueDate || 'No due date' }}</p>
-              </div>
-              <div class="col-6 col-md-4">
-                <input type="date" v-model="selectedCard.dueDate" class="date-picker-input form-control"
-                  :class="{ 'no-date': !selectedCard.dueDate }"
-                  :data-placeholder="selectedCard.dueDate ? '' : 'No due date'" />
-              </div>
-            </div>
-          </div>
-
-          <div v-if="getCardChecklists(selectedCard.idChecklists).length > 0" class="popup-field">
-            <label>Checklists:</label>
-            <div v-for="checklist in getCardChecklists(selectedCard.idChecklists)" :key="checklist.id"
-              class="checklist">
-              <div class="checklist-title"><input class="rename-input p-2" v-model="checklist.name" /></div>
-              <div class="checklist-items">
-                <div v-for="item in checklist.checkItems" :key="item.id" class="checklist-item">
-                  <input type="checkbox" v-model="item.state" :id="item.id" class="checklist-checkbox"
-                    :true-value="'complete'" :false-value="'incomplete'" />
-                  <label :for="item.id" class="checklist-label">{{ item.name }}</label>
-                  <button class="btn btn-sm">dd</button>
-                  <button class="btn btn-sm">dd</button>
-                  <button class="btn btn-sm">dd</button>
+              <div class="popup-field">
+                <label>Due Date:</label>
+                <div class="row g-2 align-items-center">
+                  <div class="col-6 col-md-8">
+                    <p class="due-date-text mb-0">{{ selectedCard.dueDate || 'No due date' }}</p>
+                  </div>
+                  <div class="col-6 col-md-4">
+                    <input type="date" v-model="selectedCard.dueDate" class="date-picker-input form-control"
+                      :class="{ 'no-date': !selectedCard.dueDate }"
+                      :data-placeholder="selectedCard.dueDate ? '' : 'No due date'" />
+                  </div>
                 </div>
               </div>
+
+              <div class="popup-field">
+                <label>Checklists:</label>
+
+                <!-- Existing checklists -->
+                <div v-for="checklist in getCardChecklists(selectedCard.idChecklists)" :key="checklist.id"
+                  class="checklist">
+
+                  <!-- Checklist header with edit / delete -->
+                  <div class="checklist-header">
+                    <input v-model="checklist.name" class="checklist-title-input" placeholder="Checklist title..." />
+                    <button class="btn btn-sm btn-danger-outline" @click.stop="deleteChecklist(checklist.id)">✕</button>
+                  </div>
+
+                  <!-- Progress bar (optional) -->
+                  <div class="checklist-progress small text-muted mb-1" v-if="checklist.checkItems.length">
+                    {{ getCompletedCount(checklist) }}/{{ checklist.checkItems.length }} done
+                  </div>
+
+                  <!-- Items -->
+                  <div class="checklist-items">
+                    <div v-for="(item, itemIdx) in checklist.checkItems" :key="item.id" class="checklist-item">
+
+                      <!-- Checkbox -->
+                      <input type="checkbox" :checked="item.state === 'complete'"
+                        @change="toggleItemState(checklist, item)" :id="item.id" class="checklist-checkbox" />
+
+                      <!-- Item name (inline editing) -->
+                      <span v-if="editingItemId !== item.id" class="checklist-item-name" @click="startEditItem(item)">
+                        {{ item.name }}
+                      </span>
+                      <input v-else v-model="editItemName" class="checklist-item-input"
+                        @keyup.enter="saveEditItem(checklist, item)" @keyup.escape="cancelEditItem"
+                        @blur="saveEditItem(checklist, item)" ref="itemEditInput" autofocus />
+
+                      <!-- Item controls -->
+                      <div class="checklist-item-actions">
+                        <button class="btn btn-sm btn-icon" @click.stop="moveItemUp(checklist, itemIdx)"
+                          title="Move up">↑</button>
+                        <button class="btn btn-sm btn-icon" @click.stop="moveItemDown(checklist, itemIdx)"
+                          title="Move down">↓</button>
+                        <button class="btn btn-sm btn-icon" @click.stop="deleteItem(checklist, item.id)"
+                          title="Delete item">✕</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Add item to this checklist -->
+                  <div class="add-item-row">
+                    <input v-model="newItemNames[checklist.id]" :id="'new-item-' + checklist.id" type="text"
+                      class="add-item-input" placeholder="Add an item..." @keyup.enter="addItem(checklist)" />
+                    <button class="btn btn-sm btn-primary" @click="addItem(checklist)"
+                      :disabled="!newItemNames[checklist.id]?.trim()">Add</button>
+                  </div>
+                </div>
+
+                <!-- Add a new checklist -->
+                <div class="add-checklist-row">
+                  <input v-model="newChecklistName" type="text" class="add-checklist-input"
+                    placeholder="Add checklist..." @keyup.enter="addChecklist" />
+                  <button class="btn btn-sm btn-primary" @click="addChecklist"
+                    :disabled="!newChecklistName.trim()">Add</button>
+                </div>
+              </div>
+
+
+
             </div>
           </div>
         </div>
 
       </div>
     </div>
-
   </div>
 </template>
 
@@ -239,11 +319,11 @@ import LabelBar from './LabelBar.vue';
 export default {
   name: 'Viewer',
   components: {
-    VueTagsInput,LabelBar
+    VueTagsInput, LabelBar
   },
   data() {
     return {
-      main: this.export_data && this.export_data.length > 1 ? JSON.parse(this.export_data) : { lists: [], cards: [], checklists: [] },
+      main: this.initMainData(),
       default_list_name: "list",
       activeSettingsPanel: null, // Track which list's panel is open
       renamingIndex: null, // Track which list is being renamed
@@ -274,10 +354,21 @@ export default {
       listIdCounter: Date.now(),
 
       // Context menu
-      showContextMenuFlag: false,
-      contextMenuX: 0,
-      contextMenuY: 0,
-      contextMenuCard: null,
+      activeCardMenuId: null,
+
+      // Label popup state
+      showLabelPopup: false,
+      labelPopupCard: null,
+      newLabelName: '',
+      selectedLabelColor: null,
+
+
+      // Checklist editing state (new)
+      editingItemId: null,        // which item is being edited
+      editItemName: '',           // temporary name during edit
+      newChecklistName: '',       // for the "Add checklist" input
+      newItemNames: {},           // per-checklist new item text, e.g. { [checklistId]: 'text' }
+
 
       showPopup: false,
       selectedCard: {}
@@ -289,62 +380,444 @@ export default {
       type: Boolean,
       required: true
     },
+    labelNameCheckbox: {
+      require: true,
+      type: Boolean,
+      default: false,
+    },
     export_data: {
       default: null,
       type: String,
       required: true
     },
-    labelColorMap:{
-      required:true
+    labelColorMap: {
+      required: true
     }
   },
   watch: {
     export_data(newVal) {
+      console.log('fdddf')
       if (newVal && newVal.length > 1) {
         this.main = JSON.parse(newVal);
+
+
+        this.$emit('update-expand', 'Updated from child!');
       }
-      this.$emit('update-expand', 'Updated from child!');
     }
   },
   mounted() {
     // Close context menu when clicking anywhere
-    document.addEventListener('click', this.closeContextMenu);
+    document.addEventListener('click', this.closeCardMenuOnOutside);
     document.addEventListener('click', this.closeSettingsPanel);
     document.addEventListener('click', this.closeRenameOnClickOutside);
 
   },
   beforeUnmount() {
-    document.removeEventListener('click', this.closeContextMenu);
+    document.removeEventListener('click', this.closeCardMenuOnOutside);
     document.removeEventListener('click', this.closeSettingsPanel);
     document.removeEventListener('click', this.closeRenameOnClickOutside);
   },
   methods: {
-    handleTagsChanged(newTag,selectedCard) {
 
-      if(selectedCard.tags) {
+    initMainData() {
+      let Dtval = {}
+      if (this.export_data && this.export_data.length > 1) {
+        Dtval = JSON.parse(this.export_data)
+      }
+
+      if (!Dtval.exiting_tags) {
+        Dtval.exiting_tags = []
+      }
+
+      if (!Dtval.labelNames) {
+        Dtval.labelNames = {
+          black: '',
+          black_dark: '',
+          black_light: '',
+          blue: '',
+          blue_dark: '',
+          blue_light: '',
+          green: '',
+          green_dark: '',
+          green_light: '',
+          lime: '',
+          lime_dark: '',
+          lime_light: '',
+          orange: '',
+          orange_dark: '',
+          orange_light: '',
+          pink: '',
+          pink_dark: '',
+          pink_light: '',
+          purple: '',
+          purple_dark: '',
+          purple_light: '',
+          red: '',
+          red_dark: '',
+          red_light: '',
+          sky: '',
+          sky_dark: '',
+          sky_light: '',
+          yellow: '',
+          yellow_dark: '',
+          yellow_light: '',
+          Done: ''
+        }
+      }
+
+      if (!Dtval.lists) {
+        Dtval.lists = []
+
+      }
+
+      if (!Dtval.cards) {
+        Dtval.cards = []
+
+      }
+
+      if (!Dtval.checklists) {
+        Dtval.checklists = []
+      }
+
+
+      return Dtval;
+    },
+
+    // ===== New checklist methods =====
+
+    /** Get how many items are complete in a checklist */
+    getCompletedCount(checklist) {
+      return checklist.checkItems.filter(item => item.state === 'complete').length;
+    },
+
+    /** Add a brand new checklist to the current card */
+    addChecklist() {
+      const name = this.newChecklistName.trim();
+      if (!name) return;
+
+      const checklistId = this.generateChecklistId();
+      const card = this.selectedCard;
+
+      const newChecklist = {
+        id: checklistId,
+        name: name,
+        idBoard: this.main.lists.find(l => l.id === card.idList)?.idBoard || '',
+        idCard: card.id,
+        checkItems: [],
+        pos: this.main.checklists.length * 65535
+      };
+
+      // Add to main.checklists array
+      if (!this.main.checklists) {
+        this.main.checklists = [];
+      }
+      this.main.checklists.push(newChecklist);
+
+      // Link to card
+      if (!card.idChecklists) card.idChecklists = [];
+      card.idChecklists.push(checklistId);
+
+      this.newChecklistName = '';
+      this.main.checklists = [...this.main.checklists]; // reactivity
+      this.main.cards = [...this.main.cards];
+    },
+
+    /** Delete a whole checklist */
+    deleteChecklist(checklistId) {
+      const card = this.selectedCard;
+      if (!card) return;
+
+      // Remove from card's list of checklists
+      card.idChecklists = card.idChecklists.filter(id => id !== checklistId);
+
+      // Remove from main.checklists
+      this.main.checklists = this.main.checklists.filter(cl => cl.id !== checklistId);
+
+      this.main.cards = [...this.main.cards];
+      this.main.checklists = [...this.main.checklists];
+    },
+
+    /** Add a new item to a specific checklist */
+    addItem(checklist) {
+      const text = (this.newItemNames[checklist.id] || '').trim();
+      if (!text) return;
+
+      const itemId = this.generateCheckItemId();
+      const newItem = {
+        id: itemId,
+        name: text,
+        state: 'incomplete',
+        pos: checklist.checkItems.length * 65535
+      };
+
+      checklist.checkItems.push(newItem);
+
+      // Trigger reactivity (reassign the array)
+      this.main.checklists = [...this.main.checklists];
+
+      // Clear input
+      this.newItemNames[checklist.id] = '';
+      this.$set(this.newItemNames, checklist.id, ''); // if newItemNames was initially empty
+    },
+
+    /** Delete an item from a checklist */
+    deleteItem(checklist, itemId) {
+      checklist.checkItems = checklist.checkItems.filter(item => item.id !== itemId);
+      this.main.checklists = [...this.main.checklists];
+    },
+
+    /** Move item up (swap with previous) */
+    moveItemUp(checklist, currentIdx) {
+      if (currentIdx <= 0) return;
+      const items = checklist.checkItems;
+      [items[currentIdx], items[currentIdx - 1]] = [items[currentIdx - 1], items[currentIdx]];
+      this.main.checklists = [...this.main.checklists];
+    },
+
+    /** Move item down (swap with next) */
+    moveItemDown(checklist, currentIdx) {
+      if (currentIdx >= checklist.checkItems.length - 1) return;
+      const items = checklist.checkItems;
+      [items[currentIdx], items[currentIdx + 1]] = [items[currentIdx + 1], items[currentIdx]];
+      this.main.checklists = [...this.main.checklists];
+    },
+
+    /** Toggle checkbox state complete/incomplete */
+    toggleItemState(checklist, item) {
+      item.state = item.state === 'complete' ? 'incomplete' : 'complete';
+      this.main.checklists = [...this.main.checklists];
+    },
+
+    /** Start editing an item inline */
+    startEditItem(item) {
+      this.editingItemId = item.id;
+      this.editItemName = item.name;
+      this.$nextTick(() => {
+        // Focus the input that appeared
+        const input = this.$refs.itemEditInput;
+        if (input) {
+          if (Array.isArray(input)) input[0].focus();
+          else input.focus();
+        }
+      });
+    },
+
+    /** Save edited item name */
+    saveEditItem(checklist, item) {
+      if (this.editingItemId !== item.id) return;
+      const newName = this.editItemName.trim();
+      if (newName && newName !== item.name) {
+        item.name = newName;
+        this.main.checklists = [...this.main.checklists];
+      }
+      this.editingItemId = null;
+      this.editItemName = '';
+    },
+
+    /** Cancel item editing */
+    cancelEditItem() {
+      this.editingItemId = null;
+      this.editItemName = '';
+    },
+
+    // ===== Helper ID generators =====
+
+    generateChecklistId() {
+      let newId;
+      do {
+        const ts = Math.floor(Date.now() / 1000).toString(16).padStart(8, '0');
+        const r1 = Math.random().toString(16).substring(2, 10);
+        const r2 = Math.random().toString(16).substring(2, 10);
+        newId = 'cl' + ts + r1 + r2;
+      } while (this.main.checklists?.some(cl => cl.id === newId));
+      return newId;
+    },
+
+    generateCheckItemId() {
+      let newId;
+      do {
+        const ts = Math.floor(Date.now() / 1000).toString(16).padStart(8, '0');
+        const r1 = Math.random().toString(16).substring(2, 10);
+        newId = 'ci' + ts + r1;
+      } while (this.main.checklists?.some(cl => cl.checkItems?.some(i => i.id === newId)));
+      return newId;
+    },
+
+    // Make sure these are still present (they probably are):
+    getCardChecklists(checklistIds) {
+      if (!checklistIds || checklistIds.length === 0 || !this.main.checklists) return [];
+      return this.main.checklists.filter(checklist =>
+        checklistIds.includes(checklist.id)
+      );
+    },
+
+
+    toggleCardMenu(cardId) {
+      this.activeCardMenuId = this.activeCardMenuId === cardId ? null : cardId;
+    },
+
+    closeCardMenuOnOutside(event) {
+      if (!event.target.closest('.card-menu-btn') && !event.target.closest('.card-dropdown')) {
+        this.activeCardMenuId = null;
+      }
+    },
+
+    archiveCardFromMenu(card) {
+      if (confirm(`Archive "${card.name}"?`)) {
+        card.closed = true;
+        this.main.cards = [...this.main.cards];
+        this.activeCardMenuId = null;
+      }
+    },
+
+    // --- Card movement inside its list (for dropdown) ---
+    getCardIndexInList(card) {
+      const cards = this.getCardsByList(card.idList);
+      return cards.findIndex(c => c.id === card.id);
+    },
+
+    moveCardUp(card) {
+      const index = this.getCardIndexInList(card);
+      if (index > 0) {
+        this.reorderCardInSameList(card, index, index - 1);
+      }
+      this.activeCardMenuId = null;
+    },
+
+    moveCardDown(card) {
+      const index = this.getCardIndexInList(card);
+      const cards = this.getCardsByList(card.idList);
+      if (index < cards.length - 1) {
+        this.reorderCardInSameList(card, index, index + 1);
+      }
+      this.activeCardMenuId = null;
+    },
+
+    moveCardTop(card) {
+      const index = this.getCardIndexInList(card);
+      if (index > 0) {
+        this.reorderCardInSameList(card, index, 0);
+      }
+      this.activeCardMenuId = null;
+    },
+
+    moveCardBottom(card) {
+      const index = this.getCardIndexInList(card);
+      const cards = this.getCardsByList(card.idList);
+      if (index < cards.length - 1) {
+        this.reorderCardInSameList(card, index, cards.length - 1);
+      }
+      this.activeCardMenuId = null;
+    },
+
+    // The reorder method already exists, just need to make sure it updates the cards
+    reorderCardInSameList(card, fromIndex, toIndex) {
+      if (fromIndex === toIndex) return;
+      const listCards = this.main.cards
+        .filter(c => c.idList === card.idList && !c.closed)
+        .sort((a, b) => a.pos - b.pos);
+      const [movedCard] = listCards.splice(fromIndex, 1);
+      listCards.splice(toIndex, 0, movedCard);
+      listCards.forEach((c, idx) => { c.pos = idx; });
+      this.main.cards = [...this.main.cards];
+    },
+
+    // --- Label popup methods ---
+    openLabelPopup(card) {
+      this.labelPopupCard = card;
+      this.showLabelPopup = true;
+      this.newLabelName = '';
+      this.selectedLabelColor = null;
+      this.activeCardMenuId = null;
+    },
+
+    closeLabelPopup() {
+      this.showLabelPopup = false;
+      this.labelPopupCard = null;
+    },
+
+    addLabelToCard() {
+      if (!this.selectedLabelColor) return;
+      let name = this.newLabelName.trim();
+      if (!name) {
+        const name = ''
+      };
+
+      const card = this.labelPopupCard;
+      const list = this.main.lists.find(l => l.id === card.idList);
+      const boardId = list ? list.idBoard : '';
+      const orgId = list ? list.idOrganization : '';
+
+      const labelId = this.generateLabelId();
+      const newLabel = {
+        id: labelId,
+        idBoard: boardId,
+        idOrganization: orgId,
+        name: name,
+        color: this.selectedLabelColor
+      };
+
+      // Add to card.labels and card.idLabels
+      if (!card.labels) card.labels = [];
+      card.labels.push(newLabel);
+
+      if (!card.idLabels) card.idLabels = [];
+      card.idLabels.push(labelId);
+
+      this.newLabelName = '';
+      this.selectedLabelColor = null;
+      this.main.cards = [...this.main.cards]; // trigger reactivity
+    },
+
+    removeLabelFromCard(labelId) {
+      const card = this.labelPopupCard;
+      if (!card) return;
+
+      // Remove from labels array
+      card.labels = card.labels.filter(l => l.id !== labelId);
+      // Remove from idLabels array
+      card.idLabels = card.idLabels.filter(id => id !== labelId);
+
+      this.main.cards = [...this.main.cards];
+    },
+
+    generateLabelId() {
+      let newId;
+      do {
+        const timestamp = Math.floor(Date.now() / 1000).toString(16).padStart(8, '0');
+        const random1 = Math.random().toString(16).substring(2, 10);
+        const random2 = Math.random().toString(16).substring(2, 10);
+        newId = 'L' + timestamp + random1 + random2;
+      } while (this.main.cards?.some(c => c.labels?.some(l => l.id === newId)));
+      return newId;
+    },
+
+    handleTagsChanged(newTag, selectedCard) {
+
+      if (selectedCard.tags) {
 
         let tagExists = selectedCard.tags.some(tag => tag.value === newTag.value);
-        if(!tagExists) {
-          selectedCard.tags.push({"key": '', "value": newTag.value});
+        if (!tagExists) {
+          selectedCard.tags.push({ "key": '', "value": newTag.value });
         }
 
       } else {
         selectedCard.tags = [];
-        selectedCard.tags.push({"key": '', "value": newTag.value});
+        selectedCard.tags.push({ "key": '', "value": newTag.value });
       }
 
-      if(this.main.exiting_tags){
+      if (this.main.exiting_tags) {
         let tagExists = this.main.exiting_tags.some(tag => tag.value === newTag.value);
-        if(!tagExists) {
-          this.main.exiting_tags.push({"key": '',"value":newTag.value})
+        if (!tagExists) {
+          this.main.exiting_tags.push({ "key": '', "value": newTag.value })
         }
-      }else{
+      } else {
         this.main.exiting_tags = [];
-        this.main.exiting_tags.push({"key":'' ,"value":newTag.value})
+        this.main.exiting_tags.push({ "key": '', "value": newTag.value })
       }
 
 
-  },
+    },
 
     /* list settings */
     toggleSettingsPanel(index) {
@@ -524,7 +997,7 @@ export default {
         const timestamp = Math.floor(Date.now() / 1000).toString(16).padStart(8, '0');
         const random1 = Math.random().toString(16).substring(2, 10);
         const random2 = Math.random().toString(16).substring(2, 10);
-        newId = timestamp + random1 + random2 ;
+        newId = timestamp + random1 + random2;
       } while (this.main.cards && this.main.cards.some(card => card.id === newId));
 
       return newId;
@@ -532,11 +1005,11 @@ export default {
 
     generateTagId() {
 
-        // 24 hex characters like Trello
-        const timestamp = Math.floor(Date.now() / 1000).toString(16).padStart(8, '0');
-        const random1 = Math.random().toString(16).substring(2, 10);
-        const random2 = Math.random().toString(16).substring(2, 10);
-        return 'T'+timestamp + random1 + random2 ;
+      // 24 hex characters like Trello
+      const timestamp = Math.floor(Date.now() / 1000).toString(16).padStart(8, '0');
+      const random1 = Math.random().toString(16).substring(2, 10);
+      const random2 = Math.random().toString(16).substring(2, 10);
+      return 'T' + timestamp + random1 + random2;
     },
 
     // Generate unique ID for new lists
@@ -630,7 +1103,7 @@ export default {
           viewingMemberVoted: false,
           subscribed: false
         },
-        tags:[],
+        tags: [],
         checkItemStates: [],
         closed: false,
         coordinates: null,
@@ -1173,12 +1646,7 @@ export default {
     }
   },
   computed: {
-   tagStorage() {
-      if(!this.main.exiting_tags){
-        this.main.exiting_tags = []
-      }
-      return this.main.exiting_tags
-   }
+
   },
 };
 </script>
