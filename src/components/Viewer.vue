@@ -211,16 +211,10 @@
                   @tag-added="slug => handleTagsChanged(slug, selectedCard)" />
               </div>
 
-
-
               <div class="popup-field">
                 <label>Description:</label>
                 <textarea v-model="selectedCard.desc" placeholder="Add a more detailed description..."></textarea>
               </div>
-              <pre>
-
-
-          </pre>
 
               <div class="popup-field">
                 <label>Due Date:</label>
@@ -323,7 +317,8 @@ export default {
   },
   data() {
     return {
-      main: this.initMainData(),
+      main: null,
+      isInitialized: false,
       default_list_name: "list",
       activeSettingsPanel: null, // Track which list's panel is open
       renamingIndex: null, // Track which list is being renamed
@@ -396,12 +391,11 @@ export default {
   },
   watch: {
     export_data(newVal) {
-      console.log('fdddf')
       if (newVal && newVal.length > 1) {
         this.main = JSON.parse(newVal);
-
-
-        this.$emit('update-expand', 'Updated from child!');
+        if(this.main.actions){
+          this.main.actions = []
+        }
       }
     }
   },
@@ -410,12 +404,18 @@ export default {
     document.addEventListener('click', this.closeCardMenuOnOutside);
     document.addEventListener('click', this.closeSettingsPanel);
     document.addEventListener('click', this.closeRenameOnClickOutside);
-
   },
   beforeUnmount() {
     document.removeEventListener('click', this.closeCardMenuOnOutside);
     document.removeEventListener('click', this.closeSettingsPanel);
     document.removeEventListener('click', this.closeRenameOnClickOutside);
+  },
+  created() {
+    // Runs once when component is created
+    if (!this.isInitialized) {
+      this.main = this.initMainData()
+      this.isInitialized = true
+    }
   },
   methods: {
 
@@ -428,6 +428,7 @@ export default {
       if (!Dtval.exiting_tags) {
         Dtval.exiting_tags = []
       }
+      
 
       if (!Dtval.labelNames) {
         Dtval.labelNames = {
@@ -479,7 +480,8 @@ export default {
         Dtval.checklists = []
       }
 
-
+              
+      Dtval.actions = []
       return Dtval;
     },
 

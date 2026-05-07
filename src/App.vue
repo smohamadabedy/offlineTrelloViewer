@@ -1,67 +1,153 @@
 <template>
-  <div class="d-none">
-    <!-- Upload Section - Animated to Top -->
-    <div class="upload-container" :class="{ collapsed: isExpanded }">
-      <div class="upload-section" :class="{ show: isExpanded }">
-        <label for="fileInput" class="upload-label">
-          <div class="upload-content">
-            <div>
-              <button class="btn btn-danger" @click="toggleCollapse">×</button>
+  <section class="h-100 d-flex flex-column">
 
-              <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M12 4v12m0 0l-3-3m3 3l3-3M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-width="2"
-                  stroke-linecap="round" />
-              </svg>
-              <div class="upload-text">
-                <span class="upload-title">Choose a file or drag & drop</span>
-                <span class="upload-subtitle">Trello JSON Export</span>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-dark bg-dark">
+      <div class="container-fluid flex-nowrap overflow-auto">
+
+        <div class="d-flex align-items-center me-auto">
+          <!-- Simple Board Selector without Bootstrap JS -->
+          <div class="board-selector-wrapper me-2">
+
+            <!-- Custom Dropdown Menu -->
+            <div v-if="showBoardMenu && boards.length > 0" class="custom-dropdown">
+              <div v-for="board in boards" :key="board.id" class="custom-dropdown-item"
+                :class="{ active: board.id === activeBoardId }" @click="switchBoard(board.id); showBoardMenu = false">
+                <div class="dropdown-item-content">
+                  <span class="dropdown-item-name">{{ board.name }}</span>
+                  <small class="dropdown-item-date">{{ formatDate(board.lastModified) }}</small>
+                </div>
+                <button @click.stop="deleteBoard(board.id)" class="dropdown-item-delete"
+                  title="Delete Board">🗑️</button>
+              </div>
+              <div class="custom-dropdown-divider"></div>
+              <div class="custom-dropdown-item new-board-item" @click="openBoardOverlay; showBoardMenu = false">
+                ➕ Create New Board
               </div>
             </div>
           </div>
-        </label>
-      </div>
-    </div>
-  </div>
 
+          <button @click="openBoardOverlay" class="btn btn-sm btn-outline-info me-2 text-nowrap">
+            📋 {{ boards.length > 0 ? 'Boards' : 'Create Board' }}
+          </button>
 
-  <section class="dark-mode h-100 d-flex flex-column">
-    <nav class="navbar navbar-dark bg-dark mb-3">
-      <div class="container-fluid flex-nowrap overflow-auto">
-        <div class="d-flex align-items-center me-auto">
+          <div class="vr me-2"></div>
+
           <label for="fileInput" class="btn btn-sm btn-outline-primary me-2 text-nowrap">📂 Upload</label>
-          <input type="file" id="fileInput" @change="onFileChange" hidden>
+          <input type="file" id="fileInput" @change="onFileChange" hidden accept=".json">
 
-          <button @click="downloadData" class="btn btn-sm btn-outline-success me-2 text-nowrap">💾 Download</button>
-          <button @click="SaveLocalStorage" class="btn btn-sm btn-outline-info me-2 text-nowrap">📥 Save</button>
+          <button @click="downloadData" class="btn btn-sm btn-outline-success me-2 text-nowrap"
+            :disabled="!activeBoardId">💾 Download</button>
+          <button @click="SaveLocalStorage" class="btn btn-sm btn-outline-info me-2 text-nowrap"
+            :disabled="!activeBoardId">📥 Save</button>
+          <button @click="resetEverything" class="btn btn-sm btn-outline-warning me-2 text-nowrap">
+            🔄 Reset All
+          </button>
 
-          <button @click="ClearLocalStorage" class="btn btn-sm btn-outline-danger me-2 text-nowrap">🗑️ Clear</button>
+          <div class="vr me-2"></div>
 
-          <div class="form-check form-switch d-flex align-items-center ms-3 text-nowrap">
+          <div class="form-check form-switch d-flex align-items-center ms-2 text-nowrap">
             <input type="checkbox" v-model="autoSaveCheckbox" class="form-check-input" id="autoSaveCheckbox" />
-            <label class="form-check-label ms-2 text-light" for="autoSaveCheckbox">Auto Save</label>
+            <label class="form-check-label ms-2 text-light" for="autoSaveCheckbox" style="font-size: 0.85rem;">
+              Auto Save
+            </label>
           </div>
-
-
-          <div class="form-check form-switch d-flex align-items-center ms-3 text-nowrap">
+          <div class="form-check form-switch d-flex align-items-center ms-2 text-nowrap">
             <input type="checkbox" v-model="labelNameCheckbox" class="form-check-input" id="labelNameCheckbox" />
-            <label class="form-check-label ms-2 text-light" for="labelNameCheckbox">Hide Label name</label>
+            <label class="form-check-label ms-2 text-light" for="labelNameCheckbox" style="font-size: 0.85rem;">
+              Hide Labels
+            </label>
           </div>
-
-          <div class="form-check form-switch d-flex align-items-center ms-3 text-nowrap">
+          <div class="form-check form-switch d-flex align-items-center ms-2 text-nowrap">
             <input type="checkbox" v-model="closedCheckbox" class="form-check-input" id="closedSwitch" />
-            <label class="form-check-label ms-2 text-light" for="closedSwitch">Show Closed</label>
+            <label class="form-check-label ms-2 text-light" for="closedSwitch" style="font-size: 0.85rem;">
+              Archived
+            </label>
           </div>
         </div>
 
         <div class="d-flex align-items-center ms-3">
           <div class="btn-group">
-            <button @click="zoomIn" class="btn btn-sm btn-outline-secondary text-nowrap">🔍+</button>
-            <button @click="zoomOut" class="btn btn-sm btn-outline-secondary text-nowrap">🔍-</button>
-            <button @click="resetZoom" class="btn btn-sm btn-outline-secondary text-nowrap">⟳</button>
+            <button @click="zoomIn" class="btn btn-sm btn-outline-secondary text-nowrap" title="Zoom In">🔍+</button>
+            <button @click="zoomOut" class="btn btn-sm btn-outline-secondary text-nowrap" title="Zoom Out">🔍-</button>
+            <button @click="resetZoom" class="btn btn-sm btn-outline-secondary text-nowrap" title="Reset Zoom">
+              {{ zoomLevel }}%
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </nav>
+
+
+    <!-- Board Overlay Modal -->
+<div v-if="showBoardOverlay" class="modal-overlay">
+  <div class="modal-content board-modal">
+    <div class="modal-header">
+      <h3 class="modal-title">📋 Board Management</h3>
+    
+    </div>
+    
+    <div class="modal-body">
+      <!-- Create New Board Section -->
+      <div class="create-board-section mb-4">
+        <h4>Create New Board</h4>
+        <div class="input-group">
+          <input v-model="newBoardName" type="text" placeholder="Enter board name..." class="form-control"
+            @keyup.enter="createNewBoard" ref="newBoardInput" />
+          <button @click="createNewBoard" class="btn btn-primary" :disabled="!newBoardName.trim()">
+            ➕ Create
+          </button>
+        </div>
+      </div>
+
+      <!-- Import Board Section -->
+      <div class="import-board-section mb-4">
+        <h4>Import Board from File</h4>
+        <div class="input-group">
+          <input type="file" @change="importBoardFromFile" class="form-control" accept=".json"
+            ref="importFileInput" />
+        </div>
+      </div>
+
+      <!-- Existing Boards List -->
+      <div v-if="boards.length > 0" class="existing-boards-section">
+        <h4>Your Boards ({{ boards.length }})</h4>
+        <div class="boards-list">
+          <div v-for="board in boards" :key="board.id" class="board-card"
+            @click="switchBoard(board.id); closeBoardOverlay()" :class="{ active: board.id === activeBoardId }">
+            <div class="board-card-info">
+              <div class="board-card-name">{{ board.name }}</div>
+              <div class="board-card-meta">
+                <small>Created: {{ formatDate(board.createdAt) }}</small>
+                <small>Modified: {{ formatDate(board.lastModified) }}</small>
+              </div>
+            </div>
+            <div class="board-card-actions">
+              <button @click.stop="switchBoard(board.id); closeBoardOverlay()" class="btn btn-sm btn-outline-light"
+                title="Open Board">
+                📂
+              </button>
+              <button @click.stop="deleteBoard(board.id)" class="btn btn-sm btn-outline-danger"
+                title="Delete Board">
+                🗑️
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </nav>
+
+      <!-- No Boards Message -->
+      <div v-else class="no-boards-message">
+        <div class="text-center p-4">
+          <div class="fs-1 mb-3">🚀</div>
+          <h5>No Boards Yet</h5>
+          <p class="text-muted">Create a new board or import one from a file to get started!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
     <!-- Sidebar Toggle Button -->
     <button class="sidebar-toggle" @click="toggleSidebar" :class="{ active: sidebarOpen }">
@@ -82,56 +168,66 @@
       <!-- Tab Content -->
       <div class="sidebar-content">
         <!-- Main Tab -->
-        <div v-if="activeTab === 'main' && this.$refs.viewerRef" class="tab-panel">
+        <div v-if="activeTab === 'main' && $refs.viewerRef && $refs.viewerRef.main" class="tab-panel">
           <h5>Board Info</h5>
           <div class="sidebar-field">
             <label>Board Name:</label>
-            <input v-model="this.$refs.viewerRef.main.name" type="text" class="form-control" />
+            <input v-model="$refs.viewerRef.main.name" type="text" class="form-control" @change="onDataChanged" />
           </div>
-          <div class="sidebar-field" v-if="this.$refs.viewerRef.main.lists">
-            <label>Lists: {{ this.$refs.viewerRef.main.lists.length ?? 0}}</label>
+          <div class="sidebar-field" v-if="$refs.viewerRef.main.lists">
+            <label>Lists:</label>
+            <span class="badge bg-primary">{{ $refs.viewerRef.main.lists.length ?? 0 }}</span>
           </div>
-          <div class="sidebar-field" v-if="this.$refs.viewerRef.main.cards">
-            <label>Cards: {{ this.$refs.viewerRef.main.cards.length ?? 0 }}</label>
+          <div class="sidebar-field" v-if="$refs.viewerRef.main.cards">
+            <label>Cards:</label>
+            <span class="badge bg-success">{{ $refs.viewerRef.main.cards.length ?? 0 }}</span>
           </div>
-          <div class="sidebar-field" v-if="this.$refs.viewerRef.main.checklists">
-            <label>checklist: {{ this.$refs.viewerRef.main.checklists.length ?? 0}}</label>
+          <div class="sidebar-field" v-if="$refs.viewerRef.main.checklists">
+            <label>Checklists:</label>
+            <span class="badge bg-info">{{ $refs.viewerRef.main.checklists.length ?? 0 }}</span>
           </div>
-          <div class="sidebar-field" v-if="this.$refs.viewerRef.main.exiting_tags">
-            <label>tags: {{ this.$refs.viewerRef.main.exiting_tags.length ?? 0}}</label>
+          <div class="sidebar-field" v-if="$refs.viewerRef.main.exiting_tags">
+            <label>Tags:</label>
+            <span class="badge bg-warning">{{ $refs.viewerRef.main.exiting_tags.length ?? 0 }}</span>
           </div>
-          <div class="sidebar-field" v-if="this.$refs.viewerRef.main.dateLastActivity">
-            <label>dateLastActivity: {{ formatDate(this.$refs.viewerRef.main.dateLastActivity) }}</label>
+          <div class="sidebar-field" v-if="$refs.viewerRef.main.dateLastActivity">
+            <label>Last Activity:</label>
+            <span>{{ formatDate($refs.viewerRef.main.dateLastActivity) }}</span>
           </div>
-          <div class="sidebar-field" v-if="this.$refs.viewerRef.main.dateLastActivity">
-            <label>dateLastView: {{ formatDate(this.$refs.viewerRef.main.dateLastActivity) }}</label>
-          </div>
-
         </div>
 
         <!-- Data Tab -->
         <div v-if="activeTab === 'data'" class="tab-panel">
           <h5>Data Management</h5>
-          <button @click="SaveLocalStorage" class="btn btn-sm btn-outline-info w-100 mb-2">📥 Save</button>
-          <button @click="downloadData" class="btn btn-sm btn-outline-success w-100 mb-2">💾 Download</button>
-          <button @click="ClearLocalStorage" class="btn btn-sm btn-outline-danger w-100">🗑️ Clear</button>
+          <button @click="SaveLocalStorage" class="btn btn-sm btn-outline-info w-100 mb-2" :disabled="!activeBoardId">📥
+            Save Current Board</button>
+          <button @click="downloadData" class="btn btn-sm btn-outline-success w-100 mb-2" :disabled="!activeBoardId">💾
+            Download as JSON</button>
+          <button @click="openBoardOverlay" class="btn btn-sm btn-outline-primary w-100 mb-2">
+            📋 Manage Boards
+          </button>
+          <hr>
+          <button @click="resetEverything" class="btn btn-sm btn-outline-danger w-100">
+            🔄 Reset Everything
+          </button>
         </div>
 
         <!-- Label Tab -->
-        <div v-if="activeTab === 'label' && this.$refs.viewerRef"" class=" tab-panel">
+        <div v-if="activeTab === 'label' && $refs.viewerRef && $refs.viewerRef.main" class="tab-panel">
           <h5>Default Labels</h5>
-          <div class="trello-sidebar-labels-list">
-            <div  v-for="(value, key) in this.$refs.viewerRef.main.labelNames" :key="key"
-              class="trello-sidebar-label-item">
+          <div v-if="$refs.viewerRef.main.labelNames" class="trello-sidebar-labels-list">
+            <div v-for="(value, key) in $refs.viewerRef.main.labelNames" :key="key" class="trello-sidebar-label-item">
               <div class="trello-sidebar-label-visual">
                 <LabelBar :labelKey="key" :labelColorMap="labelColorMap" />
               </div>
               <div class="trello-sidebar-label-info">
+                <input v-model="$refs.viewerRef.main.labelNames[key]" type="text"
+                  class="trello-sidebar-label-input form-control form-control-sm" :placeholder="'Set a Name'"
+                  @change="onDataChanged" />
               </div>
-              <input v-model="this.$refs.viewerRef.main.labelNames[key]" type="text" class="trello-sidebar-label-input" :placeholder="'Set a Name'" />
             </div>
           </div>
-          <div class="text-muted">No tags found</div>
+          <div v-else class="text-muted">No labels found</div>
         </div>
       </div>
     </div>
@@ -139,9 +235,10 @@
     <!-- Sidebar Overlay -->
     <div v-if="sidebarOpen" class="sidebar-overlay" @click="toggleSidebar"></div>
 
-    <Viewer ref="viewerRef" :labelColorMap="labelColorMap" :export_data="fileText" :is_archived="closedCheckbox" :labelNameCheckbox="labelNameCheckbox" @update-expand="toggleCollapse" />
-  </section>
+    <!-- Main Viewer Component -->
+    <Viewer ref="viewerRef" :labelColorMap="labelColorMap" :export_data="fileText" :is_archived="closedCheckbox" :labelNameCheckbox="labelNameCheckbox"/>
 
+  </section>
 </template>
 
 <script>
@@ -150,16 +247,19 @@ import LabelBar from './components/LabelBar.vue';
 
 export default {
   name: 'FileReaderDemo',
-  components: { Viewer,LabelBar },
+  components: { Viewer, LabelBar },
   data() {
     return {
-      zoomLevel: 100,
-      fileText: '',          // holds the decoded text
-      fileBinary: null,      // holds raw ArrayBuffer if needed
-      isExpanded: true,
+      fileText: '',
+      fileBinary: null,
+
       closedCheckbox: false,
       autoSaveCheckbox: true,
-      labelNameCheckbox:true,
+      labelNameCheckbox: true,
+
+      isExpanded: true,
+
+      zoomLevel: 100,
 
       sidebarOpen: false,
       activeTab: 'main',
@@ -168,6 +268,14 @@ export default {
         { id: 'data', label: 'Data' },
         { id: 'label', label: 'Label' }
       ],
+
+      // Board Management
+      boards: [],
+      activeBoardId: null,
+      showBoardOverlay: true, // Default to open on startup
+      showBoardMenu: false,  // Custom dropdown state
+      newBoardName: '',
+      autoSaveInterval: null,
 
       labelColorMap: {
         black: '#1a1a1a',
@@ -204,22 +312,375 @@ export default {
       }
     };
   },
-  mounted() {
-    this.autoLoadOnStartup();
-    // Load saved zoom from localStorage if exists
-    const savedZoom = localStorage.getItem('pageZoom');
-    if (savedZoom) {
-      this.zoomLevel = parseFloat(savedZoom);
-      this.applyZoom();
+  computed: {
+    activeBoard() {
+      return this.boards.find(b => b.id === this.activeBoardId) || null;
     }
   },
-  computed(){
-  
+  watch: {
+    autoSaveCheckbox(newVal) {
+      if (newVal) {
+        this.startAutoSave();
+      } else {
+        this.stopAutoSave();
+      }
+    },
+    closedCheckbox() {
+      localStorage.setItem('showArchived', this.closedCheckbox);
+    },
+    labelNameCheckbox() {
+      localStorage.setItem('hideLabels', this.labelNameCheckbox);
+    }
+  },
+  mounted() {
+    this.loadPreferences();
+    this.loadBoards();
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', this.closeBoardMenuOnClickOutside);
+
+    // Show board overlay on startup if no boards exist
+    if (this.boards.length === 0) {
+      this.showBoardOverlay = true;
+    } else {
+      // Load last active board
+      const lastActiveBoardId = localStorage.getItem('lastActiveBoardId');
+      if (lastActiveBoardId && this.boards.find(b => b.id === lastActiveBoardId)) {
+        this.loadBoard(lastActiveBoardId);
+      } else {
+        this.loadBoard(this.boards[0].id);
+      }
+    }
+
+    if (this.autoSaveCheckbox) {
+      this.startAutoSave();
+    }
+  },
+  beforeUnmount() {
+    this.stopAutoSave();
+    this.saveCurrentBoardData();
+    document.removeEventListener('click', this.closeBoardMenuOnClickOutside);
   },
   methods: {
+    // ===== BOARD MENU =====
+
+    toggleBoardMenu() {
+      this.showBoardMenu = !this.showBoardMenu;
+    },
+
+    closeBoardMenuOnClickOutside(event) {
+      if (this.showBoardMenu) {
+        const boardSelector = event.target.closest('.board-selector-wrapper');
+        if (!boardSelector) {
+          this.showBoardMenu = false;
+        }
+      }
+    },
+
+    // ===== PREFERENCES =====
+
+    loadPreferences() {
+      const savedZoom = localStorage.getItem('pageZoom');
+      if (savedZoom) {
+        this.zoomLevel = parseFloat(savedZoom);
+        this.$nextTick(() => this.applyZoom());
+      }
+
+      const showArchived = localStorage.getItem('showArchived');
+      if (showArchived !== null) {
+        this.closedCheckbox = showArchived === 'true';
+      }
+
+      const hideLabels = localStorage.getItem('hideLabels');
+      if (hideLabels !== null) {
+        this.labelNameCheckbox = hideLabels === 'true';
+      }
+    },
+
+    // ===== BOARD MANAGEMENT =====
+
+    openBoardOverlay() {
+      this.showBoardOverlay = true;
+      this.showBoardMenu = false;
+      this.newBoardName = '';
+      this.$nextTick(() => {
+        if (this.$refs.newBoardInput) {
+          this.$refs.newBoardInput.focus();
+        }
+      });
+    },
+
+    closeBoardOverlay() {
+      if (this.boards.length > 0 || !this.newBoardName.trim()) {
+        this.showBoardOverlay = false;
+      }
+    },
+
+    loadBoards() {
+      const savedBoards = localStorage.getItem('trelloBoards');
+      if (savedBoards) {
+        try {
+          this.boards = JSON.parse(savedBoards);
+        } catch (e) {
+          console.error('Error loading boards:', e);
+          this.boards = [];
+        }
+      }
+    },
+
+    saveBoards() {
+      localStorage.setItem('trelloBoards', JSON.stringify(this.boards));
+    },
+
+    createNewBoard() {
+      const name = this.newBoardName.trim();
+      if (!name) return;
+
+      const newBoard = {
+        id: this.generateBoardId(),
+        name: name,
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString()
+      };
+
+      this.boards.push(newBoard);
+      this.saveBoards();
+
+      // Switch to the new board
+      this.switchBoard(newBoard.id);
+
+      // Reset input
+      this.newBoardName = '';
+
+      // Focus back on input for quick creation of multiple boards
+      this.$nextTick(() => {
+        if (this.$refs.newBoardInput) {
+          this.$refs.newBoardInput.focus();
+        }
+      });
+    },
+
+    importBoardFromFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const boardData = JSON.parse(e.target.result);
+
+          const boardName = boardData.name || file.name.replace('.json', '');
+
+          const newBoard = {
+            id: this.generateBoardId(),
+            name: boardName || 'Imported Board',
+            createdAt: new Date().toISOString(),
+            lastModified: new Date().toISOString()
+          };
+
+          // Check storage before saving
+          const dataString = JSON.stringify(boardData);
+          if (dataString.length > 4 * 1024 * 1024) { // 4MB warning
+            alert('Warning: This board is very large (over 4MB). It may cause storage issues.');
+          }
+
+          this.boards.push(newBoard);
+          this.saveBoards();
+
+          // Save the imported data
+          try {
+            localStorage.setItem(`board_${newBoard.id}`, dataString);
+          } catch (storageError) {
+            // If storage fails, remove the board and show error
+            this.boards = this.boards.filter(b => b.id !== newBoard.id);
+            this.saveBoards();
+            alert('Error: Not enough storage space. Try clearing some old boards first.');
+            return;
+          }
+
+          // Switch to the new board
+          this.switchBoard(newBoard.id);
+
+          // Reset file input
+          if (this.$refs.importFileInput) {
+            this.$refs.importFileInput.value = '';
+          }
+        } catch (error) {
+          alert('Error importing board: Invalid JSON file');
+          console.error('Import error:', error);
+        }
+      };
+      reader.readAsText(file);
+    },
+
+    loadBoard(boardId) {
+      const boardData = localStorage.getItem(`board_${boardId}`);
+      if (boardData) {
+        try {
+          this.fileText = boardData;
+          this.activeBoardId = boardId;
+          localStorage.setItem('lastActiveBoardId', boardId);
+
+          const board = this.boards.find(b => b.id === boardId);
+          if (board) {
+            board.lastViewed = new Date().toISOString();
+            this.saveBoards();
+          }
+        } catch (e) {
+          console.error('Error loading board:', e);
+        }
+      } else {
+        // Initialize empty board data
+        const emptyData = this.getEmptyBoardData();
+        const dataString = JSON.stringify(emptyData);
+        localStorage.setItem(`board_${boardId}`, dataString);
+        this.fileText = dataString;
+        this.activeBoardId = boardId;
+        localStorage.setItem('lastActiveBoardId', boardId);
+      }
+    },
+
+    switchBoard(boardId) {
+      if (boardId === this.activeBoardId) return;
+
+      // Save current board first
+      this.saveCurrentBoardData();
+
+      // Load new board
+      this.loadBoard(boardId);
+    },
+
+    saveCurrentBoardData() {
+      if (this.activeBoardId && this.$refs.viewerRef && this.$refs.viewerRef.main) {
+        try {
+          const currentData = this.$refs.viewerRef.main;
+          const dataString = JSON.stringify(currentData);
+          localStorage.setItem(`board_${this.activeBoardId}`, dataString);
+
+          const board = this.boards.find(b => b.id === this.activeBoardId);
+          if (board) {
+            board.lastModified = new Date().toISOString();
+            this.saveBoards();
+          }
+        } catch (error) {
+          console.error('Error saving board:', error);
+          // Silently fail - data might be too large
+        }
+      }
+    },
+
+    deleteBoard(boardId) {
+      const board = this.boards.find(b => b.id === boardId);
+      if (!board) return;
+
+      if (confirm(`Are you sure you want to delete "${board.name}"?\n\nThis action cannot be undone!`)) {
+        localStorage.removeItem(`board_${boardId}`);
+
+        this.boards = this.boards.filter(b => b.id !== boardId);
+        this.saveBoards();
+
+        if (this.activeBoardId === boardId) {
+          if (this.boards.length > 0) {
+            this.loadBoard(this.boards[0].id);
+          } else {
+            this.activeBoardId = null;
+            this.fileText = '';
+            this.showBoardOverlay = true;
+          }
+        }
+      }
+    },
+
+    resetEverything() {
+      if (confirm('⚠️  WARNING: This will delete ALL boards and ALL data!\n\nThis action cannot be undone. Are you sure?')) {
+        this.stopAutoSave();
+
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('board_') || key === 'trelloBoards' || key === 'lastActiveBoardId')) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        this.boards = [];
+        this.activeBoardId = null;
+        this.fileText = '';
+
+        this.showBoardOverlay = true;
+        this.newBoardName = '';
+
+        if (this.autoSaveCheckbox) {
+          this.startAutoSave();
+        }
+      }
+    },
+
+    getEmptyBoardData() {
+      return {
+        name: 'New Board',
+        lists: [],
+        cards: [],
+        checklists: [],
+        exiting_tags: [],
+        labelNames: {
+          black: '', black_dark: '', black_light: '',
+          blue: '', blue_dark: '', blue_light: '',
+          green: '', green_dark: '', green_light: '',
+          lime: '', lime_dark: '', lime_light: '',
+          orange: '', orange_dark: '', orange_light: '',
+          pink: '', pink_dark: '', pink_light: '',
+          purple: '', purple_dark: '', purple_light: '',
+          red: '', red_dark: '', red_light: '',
+          sky: '', sky_dark: '', sky_light: '',
+          yellow: '', yellow_dark: '', yellow_light: '',
+          Done: ''
+        },
+        dateLastActivity: new Date().toISOString()
+      };
+    },
+
+    generateBoardId() {
+      let newId;
+      do {
+        const timestamp = Date.now().toString(36);
+        const random = Math.random().toString(36).substring(2, 8);
+        newId = 'board_' + timestamp + random;
+      } while (this.boards.some(b => b.id === newId));
+      return newId;
+    },
+
+    onDataChanged() {
+      if (this.autoSaveCheckbox) {
+        this.saveCurrentBoardData();
+      }
+    },
+
+    // ===== AUTO SAVE =====
+
+    startAutoSave() {
+      this.stopAutoSave();
+      this.autoSaveInterval = setInterval(() => {
+        this.saveCurrentBoardData();
+      }, 5000);
+    },
+
+    stopAutoSave() {
+      if (this.autoSaveInterval) {
+        clearInterval(this.autoSaveInterval);
+        this.autoSaveInterval = null;
+      }
+    },
+
+    // ===== EXISTING METHODS =====
 
     toggleSidebar() {
       this.sidebarOpen = !this.sidebarOpen;
+    },
+
+    toggleCollapse() {
+      this.isExpanded = !this.isExpanded;
     },
 
     formatDate(dateString) {
@@ -233,211 +694,63 @@ export default {
       });
     },
 
-
-    generateLabelSVG(key) {
-      const color = this.labelColorMap[key] || '#888';
-      const w = 44;
-      const h = 44;
-      const padding = 4;
-      const rectW = w - (padding * 2);
-      const rectH = h - (padding * 2);
-      const rectX = padding;
-      const rectY = padding;
-      const radius = 4;
-
-      const patternMap = {
-        black: 'stripes',
-        black_dark: 'diagonal',
-        black_light: 'dots',
-        blue: 'dots_stripe',
-        blue_dark: 'block_dot',
-        blue_light: 'stripes',
-        green: 'diagonal',
-        green_dark: 'dots',
-        green_light: 'dots_stripe',
-        lime: 'block_dot',
-        lime_dark: 'stripes',
-        lime_light: 'diagonal',
-        orange: 'dots',
-        orange_dark: 'dots_stripe',
-        orange_light: 'block_dot',
-        pink: 'stripes',
-        pink_dark: 'diagonal',
-        pink_light: 'dots',
-        purple: 'dots_stripe',
-        purple_dark: 'block_dot',
-        purple_light: 'stripes',
-        red: 'diagonal',
-        red_dark: 'dots',
-        red_light: 'dots_stripe',
-        sky: 'block_dot',
-        sky_dark: 'stripes',
-        sky_light: 'diagonal',
-        yellow: 'dots',
-        yellow_dark: 'dots_stripe',
-        yellow_light: 'block_dot',
-        Done: 'stripes'
-      };
-
-      const pattern = patternMap[key] || 'stripes';
-      const darkerColor = this.adjustColorBrightness(color, -50);
-      const lighterColor = this.adjustColorBrightness(color, 20);
-
-      const safeKey = key.replace(/[^a-zA-Z0-9]/g, '_');
-      const patternId = `pat-${safeKey}`;
-      const clipId = `clip-${safeKey}`;
-      const gradientId = `grad-${safeKey}`;
-
-      // Simple rounded rectangle path
-      const rectPath = `M ${rectX + radius} ${rectY} h ${rectW - radius * 2} a ${radius} ${radius} 0 0 1 ${radius} ${radius} v ${rectH - radius * 2} a ${radius} ${radius} 0 0 1 -${radius} ${radius} h -${rectW - radius * 2} a ${radius} ${radius} 0 0 1 -${radius} -${radius} v -${rectH - radius * 2} a ${radius} ${radius} 0 0 1 ${radius} -${radius} z`;
-
-      let patternSVG = '';
-
-      switch (pattern) {
-        case 'stripes':
-          patternSVG = `<pattern id="${patternId}" patternUnits="userSpaceOnUse" width="44" height="6"><rect width="44" height="3" fill="${darkerColor}"/><rect y="3" width="44" height="3" fill="${lighterColor}"/></pattern>`;
-          break;
-        case 'diagonal':
-          patternSVG = `<pattern id="${patternId}" patternUnits="userSpaceOnUse" width="10" height="10"><rect width="10" height="10" fill="${lighterColor}"/><line x1="0" y1="0" x2="0" y2="10" stroke="${darkerColor}" stroke-width="5"/><line x1="5" y1="0" x2="5" y2="10" stroke="${lighterColor}" stroke-width="5"/></pattern>`;
-          break;
-        case 'dots':
-          patternSVG = `<pattern id="${patternId}" patternUnits="userSpaceOnUse" width="10" height="10"><rect width="10" height="10" fill="${lighterColor}"/><circle cx="5" cy="5" r="2.5" fill="${darkerColor}"/></pattern>`;
-          break;
-        case 'dots_stripe':
-          patternSVG = `<pattern id="${patternId}" patternUnits="userSpaceOnUse" width="12" height="44"><rect width="12" height="44" fill="${lighterColor}"/><rect y="19" width="12" height="6" fill="${darkerColor}"/><circle cx="6" cy="6" r="2" fill="${darkerColor}"/><circle cx="6" cy="38" r="2" fill="${darkerColor}"/></pattern>`;
-          break;
-        case 'block_dot':
-          patternSVG = `<pattern id="${patternId}" patternUnits="userSpaceOnUse" width="44" height="44"><rect width="44" height="44" fill="${lighterColor}"/><rect x="14" y="14" width="16" height="16" rx="2" fill="${darkerColor}"/><circle cx="22" cy="22" r="3" fill="#ffffff"/><circle cx="8" cy="8" r="1.5" fill="${darkerColor}"/><circle cx="36" cy="8" r="1.5" fill="${darkerColor}"/><circle cx="36" cy="36" r="1.5" fill="${darkerColor}"/><circle cx="8" cy="36" r="1.5" fill="${darkerColor}"/></pattern>`;
-          break;
-      }
-
-      return `<defs>
-              <linearGradient id="${gradientId}" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:${color};stop-opacity:1" />
-                <stop offset="100%" style="stop-color:${this.adjustColorBrightness(color, -30)};stop-opacity:1" />
-              </linearGradient>
-              ${patternSVG}
-              <clipPath id="${clipId}"><path d="${rectPath}"/></clipPath>
-            </defs>
-            <path d="${rectPath}" fill="url(#${gradientId})" stroke="${this.adjustColorBrightness(color, -40)}" stroke-width="0.5"/>
-            <rect width="44" height="44" fill="url(#${patternId})" clip-path="url(#${clipId})" opacity="0.6"/>`;
-    },
-
-    adjustColorBrightness(hex, percent) {
-      let r, g, b;
-      if (hex.startsWith('#')) {
-        const num = parseInt(hex.replace('#', ''), 16);
-        r = (num >> 16) & 0xFF;
-        g = (num >> 8) & 0xFF;
-        b = num & 0xFF;
-      } else if (hex.startsWith('rgb')) {
-        const match = hex.match(/\d+/g);
-        if (match) {
-          r = parseInt(match[0]);
-          g = parseInt(match[1]);
-          b = parseInt(match[2]);
-        } else {
-          return hex;
-        }
-      } else {
-        return hex;
-      }
-
-      const amt = Math.round(2.55 * percent);
-      const R = Math.min(255, Math.max(0, r + amt));
-      const G = Math.min(255, Math.max(0, g + amt));
-      const B = Math.min(255, Math.max(0, b + amt));
-      return `rgb(${R},${G},${B})`;
-    },
-
-    toggleCollapse() {
-      this.isExpanded = !this.isExpanded
-    },
-
     SaveLocalStorage() {
-      const dataToSave = this.$refs.viewerRef.main;
-      localStorage.setItem('trello-board-data', JSON.stringify(dataToSave));
-      alert('Data saved to browser storage!');
+      this.saveCurrentBoardData();
+      alert('✅ Board data saved successfully!');
     },
 
-    // Load from localStorage
-    LoadLocalStorage() {
-      const savedData = localStorage.getItem('trello-board-data');
-      if (savedData) {
-        try {
-          const parsedData = JSON.parse(savedData);
-          this.$refs.viewerRef.main = parsedData;
-          alert('Data loaded from browser storage!');
-        } catch (e) {
-          alert('Error loading saved data');
-        }
-      } else {
-        alert('No saved data found in browser storage');
-      }
-    },
-
-    // Clear localStorage
     ClearLocalStorage() {
-      if (confirm('Are you sure you want to clear saved data?')) {
-        localStorage.removeItem('trello-board-data');
-        alert('Saved data cleared!');
-      }
-    },
-
-    // Auto-load on startup
-    autoLoadOnStartup() {
-      const savedData = localStorage.getItem('trello-board-data');
-      if (savedData) {
-        try {
-          const parsedData = JSON.parse(savedData);
-          this.$refs.viewerRef.main = parsedData;
-          console.log('Auto-loaded data from browser storage');
-        } catch (e) {
-          console.error('Error auto-loading data:', e);
+      if (this.activeBoardId) {
+        if (confirm('Clear current board data? This board will be reset to empty.')) {
+          const emptyData = this.getEmptyBoardData();
+          const dataString = JSON.stringify(emptyData);
+          localStorage.setItem(`board_${this.activeBoardId}`, dataString);
+          this.fileText = dataString;
+          alert('🗑️ Current board cleared!');
         }
       }
     },
 
     downloadData() {
-      // Create a copy of the main data
-      const dataToDownload = this.$refs.viewerRef.main
+      if (!this.$refs.viewerRef || !this.$refs.viewerRef.main) {
+        alert('No data to download');
+        return;
+      }
 
-      // Convert to JSON string with pretty formatting
+      const dataToDownload = this.$refs.viewerRef.main;
       const jsonString = JSON.stringify(dataToDownload, null, 2);
-
-      // Create blob and download link
       const blob = new Blob([jsonString], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
 
-      // Set download filename with current timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      link.download = `trello-data-${timestamp}.json`;
+      const boardName = this.activeBoard?.name || 'board';
+      link.download = `${boardName.replace(/\s+/g, '_')}-${timestamp}.json`;
 
       link.href = url;
       link.click();
-
-      // Clean up
       URL.revokeObjectURL(url);
-
-      // Optional: Show success message
-      this.$emit('data-downloaded', dataToDownload);
     },
-
 
     onFileChange(event) {
       const file = event.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      // For plain text files
-      reader.onload = e => {
-        this.fileText = e.target.result; // string
+      reader.onload = (e) => {
+        try {
+          JSON.parse(e.target.result);
+          this.fileText = e.target.result;
+          if (this.activeBoardId) {
+            this.saveCurrentBoardData();
+          }
+        } catch (error) {
+          alert('Invalid JSON file!');
+        }
       };
       reader.readAsText(file);
     },
 
-
-    /* Zooming */
+    // ===== Zooming =====
     applyZoom() {
       const targetDiv = document.getElementById('zoom-canvas');
       if (targetDiv) {
@@ -445,20 +758,18 @@ export default {
         targetDiv.style.transformOrigin = 'top left';
         targetDiv.style.width = `${100 / (this.zoomLevel / 100)}%`;
       }
-
-      // Save to localStorage
-      localStorage.setItem('pageZoom', this.zoomLevel);
+      localStorage.setItem('pageZoom', this.zoomLevel.toString());
     },
 
     zoomIn() {
-      if (this.zoomLevel < 200) { // Max 200%
+      if (this.zoomLevel < 200) {
         this.zoomLevel += 10;
         this.applyZoom();
       }
     },
 
     zoomOut() {
-      if (this.zoomLevel > 50) { // Min 50%
+      if (this.zoomLevel > 50) {
         this.zoomLevel -= 10;
         this.applyZoom();
       }
@@ -468,8 +779,304 @@ export default {
       this.zoomLevel = 100;
       this.applyZoom();
     },
-
   }
-
 };
 </script>
+
+<style scoped>
+/* Custom Dropdown Styles */
+.board-selector-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.custom-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: #1a1a2e;
+  border: 1px solid #2a2a4e;
+  border-radius: 8px;
+  min-width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 2000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.custom-dropdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: #ccc;
+}
+
+.custom-dropdown-item:hover {
+  background: #2a2a4e;
+}
+
+.custom-dropdown-item.active {
+  background: #0d6efd;
+  color: white;
+}
+
+.dropdown-item-content {
+  flex: 1;
+}
+
+.dropdown-item-name {
+  display: block;
+  font-weight: 500;
+}
+
+.dropdown-item-date {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.custom-dropdown-item.active .dropdown-item-date {
+  color: #ccc;
+}
+
+.dropdown-item-delete {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.dropdown-item-delete:hover {
+  background: rgba(255, 107, 107, 0.2);
+}
+
+.custom-dropdown-divider {
+  height: 1px;
+  background: #2a2a4e;
+  margin: 4px 0;
+}
+
+.new-board-item {
+  color: #0d6efd;
+  font-weight: 500;
+}
+
+.new-board-item:hover {
+  background: rgba(13, 110, 253, 0.1);
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background: #1a1a2e;
+  border: 1px solid #2a2a4e;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 700px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #2a2a4e;
+}
+
+.modal-title {
+  color: white;
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.btn-close-custom {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.btn-close-custom:hover {
+  color: white;
+}
+
+.btn-close-custom:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+/* Board Modal Specific */
+.board-modal .create-board-section,
+.board-modal .import-board-section,
+.board-modal .existing-boards-section {
+  margin-bottom: 24px;
+}
+
+.board-modal h4 {
+  color: #ccc;
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+}
+
+.board-modal .input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.board-modal .form-control {
+  background: #2a2a4e;
+  border: 1px solid #3a3a6e;
+  color: white;
+}
+
+.board-modal .form-control:focus {
+  background: #3a3a6e;
+  border-color: #4a4a8e;
+  color: white;
+  box-shadow: none;
+}
+
+.board-modal .form-control::placeholder {
+  color: #666;
+}
+
+/* Boards List */
+.boards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.board-card {
+  background: #2a2a4e;
+  border: 1px solid #3a3a6e;
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.board-card:hover {
+  background: #3a3a6e;
+  border-color: #4a4a8e;
+}
+
+.board-card.active {
+  border-color: #0d6efd;
+  background: #1a2744;
+}
+
+.board-card-info {
+  flex: 1;
+}
+
+.board-card-name {
+  color: white;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.board-card-meta {
+  display: flex;
+  gap: 16px;
+}
+
+.board-card-meta small {
+  color: #888;
+  font-size: 0.75rem;
+}
+
+.board-card-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.board-card:hover .board-card-actions {
+  opacity: 1;
+}
+
+/* No Boards Message */
+.no-boards-message {
+  padding: 32px 0;
+}
+
+.no-boards-message h5 {
+  color: #ccc;
+}
+
+/* Navbar Improvements */
+.navbar .vr {
+  background-color: #444;
+  width: 1px;
+  height: 20px;
+}
+
+.navbar .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+/* Trello Sidebar Labels */
+.trello-sidebar-labels-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trello-sidebar-label-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trello-sidebar-label-visual {
+  min-width: 40px;
+}
+
+.trello-sidebar-label-info {
+  flex: 1;
+}
+
+.trello-sidebar-label-input {
+  background: #2a2a4e !important;
+  border: 1px solid #3a3a6e !important;
+  color: white !important;
+}
+</style>
