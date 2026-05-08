@@ -1,24 +1,21 @@
 # TrelloOfflineViewer
 
-local first and browser-only trello viewer
+Local-first, browser-only Trello board viewer/editor.
 
-[online demo](https://trello.smohammadabedy.ir/)
+**Not implemented:** search/filter, comments, membership, cover images
 
-<br/>
+**Extra:** markdown descriptions, tags
 
-----
+[Online Demo](https://trello.smohammadabedy.ir/)
+
+---
+
 ```sh
 npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
 npm run dev
-```
-
-### Compile and Minify for Production
-
-```sh
 npm run build
 ```
+
+or simply run:
+```
+ docs/index.html
