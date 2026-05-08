@@ -1,5 +1,8 @@
 # TrelloOfflineViewer
 
+![Screenshot](./docs/img/screenshot.jpg)
+
+
 Local-first, browser-only Trello board viewer/editor.
 
 **Not implemented:** search/filter, comments, membership, cover images
