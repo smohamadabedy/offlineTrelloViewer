@@ -10,6 +10,8 @@ Local-first, browser-only Trello board viewer/editor.
 **Extra:** markdown descriptions, tags
 
 [Online Demo](https://trello.smohammadabedy.ir/)
+/[github page](https://smohamadabedy.github.io/offlineTrelloViewer/)
+
 
 ---
 
